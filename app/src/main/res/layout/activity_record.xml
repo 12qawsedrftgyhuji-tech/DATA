@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".record">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar2"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/toolbar_border"
+        android:minHeight="?attr/actionBarSize"
+        android:theme="?attr/actionBarTheme"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/schedulere"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginBottom="2dp"
+        android:text="일정"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/profilere"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="27dp"
+        android:layout_marginBottom="2dp"
+        android:text="프필"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/aire" />
+
+    <Button
+        android:id="@+id/homere"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="27dp"
+        android:layout_marginBottom="2dp"
+        android:text="홈"
+        app:layout_constraintBottom_toBottomOf="@+id/toolbar2"
+        app:layout_constraintStart_toEndOf="@+id/recordre" />
+
+    <Button
+        android:id="@+id/recordre"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="27dp"
+        android:layout_marginBottom="2dp"
+        android:text="기록"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/schedulere" />
+
+    <Button
+        android:id="@+id/aire"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="27dp"
+        android:layout_marginBottom="2dp"
+        android:text="AI"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/homere" />
+</androidx.constraintlayout.widget.ConstraintLayout>

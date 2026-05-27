@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "84615874589",
+    "firebase_url": "https://tlqkfzz-default-rtdb.firebaseio.com",
+    "project_id": "tlqkfzz",
+    "storage_bucket": "tlqkfzz.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:84615874589:android:a6adda0376e3a83b145ef4",
+        "android_client_info": {
+          "package_name": "com.example.ggg"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "84615874589-5p63r2fev1an1d4j77n0kvunk555g9gm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKPMun3QqXJ9T0F88sJmDVg4P41yfzalw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "84615874589-5p63r2fev1an1d4j77n0kvunk555g9gm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:84615874589:android:632b933d06e3e8f8145ef4",
+        "android_client_info": {
+          "package_name": "com.example.reeeeeeeal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "84615874589-5p63r2fev1an1d4j77n0kvunk555g9gm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKPMun3QqXJ9T0F88sJmDVg4P41yfzalw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "84615874589-5p63r2fev1an1d4j77n0kvunk555g9gm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:84615874589:android:9af25b9292ba141d145ef4",
+        "android_client_info": {
+          "package_name": "com.example.wpqkf"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "84615874589-5p63r2fev1an1d4j77n0kvunk555g9gm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKPMun3QqXJ9T0F88sJmDVg4P41yfzalw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "84615874589-5p63r2fev1an1d4j77n0kvunk555g9gm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

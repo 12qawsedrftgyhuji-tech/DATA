@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ai">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar4"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/toolbar_border"
+        android:minHeight="?attr/actionBarSize"
+        android:theme="?attr/actionBarTheme"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/scheduleai"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginBottom="2dp"
+        android:text="일정"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/profileai"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="27dp"
+        android:layout_marginBottom="2dp"
+        android:text="프필"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/aiai" />
+
+    <Button
+        android:id="@+id/homeai"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="27dp"
+        android:layout_marginBottom="2dp"
+        android:text="홈"
+        app:layout_constraintBottom_toBottomOf="@+id/toolbar4"
+        app:layout_constraintStart_toEndOf="@+id/recordai" />
+
+    <Button
+        android:id="@+id/recordai"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="27dp"
+        android:layout_marginBottom="2dp"
+        android:text="기록"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/scheduleai" />
+
+    <Button
+        android:id="@+id/aiai"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="27dp"
+        android:layout_marginBottom="2dp"
+        android:text="AI"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/homeai" />
+</androidx.constraintlayout.widget.ConstraintLayout>
