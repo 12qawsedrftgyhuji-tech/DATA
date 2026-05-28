@@ -4,9 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -16,6 +18,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.storage.FirebaseStorage
 
 private lateinit var mBtnHome6: Button
 private lateinit var mBtnChange: Button
@@ -29,7 +32,30 @@ private lateinit var mTvName: TextView
 private lateinit var mTvAge: TextView
 private lateinit var mTvNumber: TextView
 
+private lateinit var mStorageRef: FirebaseStorage
+
+private lateinit var mIvProfile: ImageView
+
+private lateinit var imageLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
+
+private lateinit var mBtnImage: Button
+
 class change : AppCompatActivity() {
+    private fun uploadImageToFirebase(uri: android.net.Uri) {
+        val uid = mFirebaseAuth.currentUser?.uid ?: return
+
+        // 서버 창고(Storage)에 내 UID 이름으로 사진 저장 경로 설정
+        val fileRef = mStorageRef.reference.child("ProfileImages").child("$uid.jpg")
+
+        // 파일 업로드 시작
+        fileRef.putFile(uri).addOnSuccessListener {
+            // 업로드 성공 시, 인터넷에서 볼 수 있는 다운로드 주소를 요청함
+            fileRef.downloadUrl.addOnSuccessListener { downloadUri ->
+                // 따온 주소를 데이터베이스의 'image' 칸에 저장 (user.kt에서 image로 정했기 때문)
+                mDatabaseRef.child(uid).child("image").setValue(downloadUri.toString())
+            }
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -43,10 +69,37 @@ class change : AppCompatActivity() {
         mFirebaseAuth = FirebaseAuth.getInstance()
         mDatabaseRef =
             FirebaseDatabase.getInstance().getReference("UserAccount")
+        mStorageRef = FirebaseStorage.getInstance()
+        mIvProfile = findViewById(R.id.iv_profile_image_ch)
+
         mTvEmail = findViewById(R.id.이메일정보)
         mTvName = findViewById(R.id.이름바꿈)
         mTvAge = findViewById(R.id.나이바꿈)
         mTvNumber = findViewById(R.id.전번바꿈)
+        mBtnImage =findViewById(R.id.사진바꿈)
+
+        imageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val imageUri = result.data?.data // 선택한 사진의 임시 주소
+                if (imageUri != null) {
+                    mIvProfile.setImageURI(imageUri) // 화면에 즉시 보여주기
+                    uploadImageToFirebase(imageUri) // 서버로 업로드 시작
+                }
+            }
+        }
+
+        //버튼 또는 이미지를 누르면 갤러리가 열리도록 함
+        mIvProfile.setOnClickListener {
+            val intent = Intent(Intent.ACTION_PICK)
+            intent.type = "image/*"
+            imageLauncher.launch(intent)
+        }
+        mBtnImage.setOnClickListener {
+            val intent = Intent(Intent.ACTION_PICK)
+            intent.type = "image/*"
+            imageLauncher.launch(intent)
+        }
+
 
         val firebaseUser = mFirebaseAuth.currentUser
         //로그인 상태일떄만 정보를 가져오도록 하기
@@ -63,6 +116,9 @@ class change : AppCompatActivity() {
                         mTvName.text = account.name
                         mTvAge.text = account.age
                         mTvNumber.text = account.number
+                        com.bumptech.glide.Glide.with(this@change)
+                            .load(account.image) // 서버 주소
+                            .into(mIvProfile)
                     }
                 }
 

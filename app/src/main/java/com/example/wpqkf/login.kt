@@ -153,10 +153,7 @@ class login : AppCompatActivity() {
         }
     }
     private fun startLogin(){
-        if (FirebaseAuth.getInstance().currentUser != null) {
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-        }
+
         val WEB_CLIENT_ID: String = getString(R.string.default_web_client_id)
 
         val nonce = generateSecureRandomNonce()

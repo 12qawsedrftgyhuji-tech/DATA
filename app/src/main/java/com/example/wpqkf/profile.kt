@@ -59,6 +59,7 @@ class profile : AppCompatActivity() {
         mTvAge = findViewById(R.id.tv_profile_age)
         mTvNickmame = findViewById(R.id.tv_profile_nickname)
 
+
         //로그인 정보 가져오기
         val firebaseUser = mFirebaseAuth.currentUser
         //로그인 상태일떄만 정보를 가져오도록 하기
@@ -79,6 +80,9 @@ class profile : AppCompatActivity() {
                         mTvName.text = "이름: " + account.name
                         mTvAge.text = "나이: " + account.age
                         mTvNickmame.text = "전화번호: " + account.number
+                        com.bumptech.glide.Glide.with(this@profile)
+                            .load(account.image) // 서버에 저장된 주소 불러오기
+                            .into(findViewById(R.id.iv_profile_image_pr)) // 프로필 화면의 이미지뷰에 넣기
                     }
                 }
 
