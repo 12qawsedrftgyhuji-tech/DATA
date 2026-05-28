@@ -14,11 +14,13 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.SignInButton
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+
 
 class login : AppCompatActivity() {
     private lateinit var mFirebaseAuth: FirebaseAuth
@@ -29,7 +31,7 @@ class login : AppCompatActivity() {
     private lateinit var mBtnLogin: Button
     private lateinit var mGoogleSignInClient: GoogleSignInClient
     private lateinit var googleLoginLauncher: ActivityResultLauncher<Intent>
-    private lateinit var mBtnGoogle: Button
+    private lateinit var mBtnGoogle: SignInButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -101,12 +103,6 @@ class login : AppCompatActivity() {
                     }
                 }
         }
-        mBtnGoogle.setOnClickListener {
-            mGoogleSignInClient.signOut().addOnCompleteListener {
-                val signInIntent = mGoogleSignInClient.signInIntent
-                googleLoginLauncher.launch(signInIntent)
-            }
-        }
 
         mBtnRegister.setOnClickListener {
             startActivity(Intent(this@login, register::class.java))
@@ -144,8 +140,12 @@ class login : AppCompatActivity() {
                                     finish()
                                 }
                             }
-                            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {}
+                            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
+                                Toast.makeText(this@login, "데이터베이스 오류: ${error.message}", Toast.LENGTH_SHORT).show()
+                            }
                         })
+                } else {
+                    Toast.makeText(this@login, "파이어베이스 인증 실패: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                 }
             }
     }

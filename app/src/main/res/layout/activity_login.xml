@@ -51,13 +51,14 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/로그인버튼" />
 
-    <Button
+    <com.google.android.gms.common.SignInButton
         android:id="@+id/구글로그인버튼"
         android:layout_width="210dp"
         android:layout_height="45dp"
         android:layout_marginTop="60dp"
-        android:text="구글 로그인"
+        app:buttonSize="standard"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/비번입력로그" />
 

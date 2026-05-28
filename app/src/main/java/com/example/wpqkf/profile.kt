@@ -10,6 +10,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -32,7 +34,7 @@ class profile : AppCompatActivity() {
     private lateinit var mTvEmail: TextView
     private lateinit var mTvName: TextView
     private lateinit var mTvAge: TextView
-    private lateinit var mTvNickmame: TextView
+    private lateinit var mTvNumber: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,7 +52,7 @@ class profile : AppCompatActivity() {
         mTvEmail = findViewById(R.id.tv_profile_email)
         mTvName = findViewById(R.id.tv_profile_name)
         mTvAge = findViewById(R.id.tv_profile_age)
-        mTvNickmame = findViewById(R.id.tv_profile_nickname)
+        mTvNumber = findViewById(R.id.tv_profile_number)
 
         //로그인 정보 가져오기
         val firebaseUser = mFirebaseAuth.currentUser
@@ -67,7 +69,10 @@ class profile : AppCompatActivity() {
                         mTvEmail.text = "이메일: " + account.emailId
                         mTvName.text = "이름: " + account.name
                         mTvAge.text = "나이: " + account.age
-                        mTvNickmame.text = "전화번호: " + account.number
+                        mTvNumber.text = "전화번호: " + account.number
+                        com.bumptech.glide.Glide.with(this@profile)
+                            .load(account.image) // 서버에 저장된 주소 불러오기
+                            .into(findViewById(R.id.iv_profile_image_pr)) // 프로필 화면의 이미지뷰에 넣기
                     }
                 }
                 override fun onCancelled(error: DatabaseError) {
@@ -111,9 +116,27 @@ class profile : AppCompatActivity() {
             finish()
         }
         mBtnLogout.setOnClickListener {
-            val intent = Intent(this@profile, login::class.java)
-            startActivity(intent)
-            finish()
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id))
+                .requestEmail()
+                .build()
+            val googleSignInClient = GoogleSignIn.getClient(this, gso)
+
+            googleSignInClient.signOut().addOnCompleteListener {
+                // 3. 내부 저장소(SharedPreferences) 데이터가 있다면 삭제 (선택사항)
+                val sharedPreferences = getSharedPreferences("user_prefs", MODE_PRIVATE)
+                sharedPreferences.edit().clear().apply()
+
+                Toast.makeText(this, "로그아웃 되었습니다.", Toast.LENGTH_SHORT).show()
+
+                // 4. 로그인 화면으로 이동 (기존 화면 스택 모두 제거)
+                val intent = Intent(this, login::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                startActivity(intent)
+                finish()
+            }
         }
+
     }
 }

@@ -25,6 +25,7 @@ class user : AppCompatActivity() {
         var password: String? = null,  // 비밀번호
         var name: String? = null,
         var age: String? = null,
-        var number: String? = null
+        var number: String? = null,
+        var image: String? = null
     )
 }
