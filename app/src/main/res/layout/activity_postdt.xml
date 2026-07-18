@@ -72,16 +72,38 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginEnd="30dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginEnd="15dp"
             android:text="이전" />
+
+        <Button
+            android:id="@+id/btnmodify"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="15dp"
+            android:layout_weight="1"
+            android:backgroundTint="#0FDAF4"
+            android:text="수정"
+            android:textColorLink="#673AB7" />
+
+        <Button
+            android:id="@+id/btndelete"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="#F43C3C"
+            android:text="삭제"
+            android:textColorLink="#673AB7" />
 
         <Button
             android:id="@+id/btnright"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="30dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginEnd="15dp"
             android:text="다음" />
+
 
     </LinearLayout>
     <androidx.appcompat.widget.Toolbar

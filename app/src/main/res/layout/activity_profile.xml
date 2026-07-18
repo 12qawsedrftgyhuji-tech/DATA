@@ -192,6 +192,7 @@
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:text="바꿔"
+        android:padding="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

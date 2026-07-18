@@ -42,6 +42,9 @@
             android:name=".register"
             android:exported="false" />
         <activity
+            android:name=".ModifyText"
+            android:exported="false" />
+        <activity
             android:name=".login"
             android:exported="true">
             <intent-filter>
