@@ -17,7 +17,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
+    <!--
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar5"
         android:layout_width="0dp"
@@ -79,7 +79,65 @@
         android:layout_marginBottom="2dp"
         android:text="AI"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/homepr" />
+        app:layout_constraintStart_toEndOf="@+id/homepr" />-->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar4"
+        android:layout_width="match_parent"
+        android:layout_height="68dp"
+        android:background="@drawable/toolbar_border"
+        app:contentInsetStart="0dp"
+        app:contentInsetLeft="0dp"
+        app:contentInsetEnd="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <Button
+            android:id="@+id/schedule"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_gravity="center_vertical"
+            android:padding="0dp"
+            android:text="일정" />
+
+        <Button
+            android:id="@+id/record"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="27dp"
+            android:layout_gravity="center_vertical"
+            android:padding="0dp"
+            android:text="기록" />
+
+        <Button
+            android:id="@+id/home"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="27dp"
+            android:layout_gravity="center_vertical"
+            android:padding="0dp"
+            android:text="홈" />
+
+        <Button
+            android:id="@+id/ai"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="27dp"
+            android:layout_gravity="center_vertical"
+            android:padding="0dp"
+            android:text="AI" />
+
+        <Button
+            android:id="@+id/profile"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="27dp"
+            android:layout_gravity="center_vertical"
+            android:padding="0dp"
+            android:text="프로필" />
+
+    </androidx.appcompat.widget.Toolbar>
 
     <TextView
         android:id="@+id/tv_profile_email"
@@ -143,7 +201,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="20dp"
         android:text="로그아웃하기"
-        app:layout_constraintBottom_toTopOf="@+id/toolbar5"
+        app:layout_constraintBottom_toTopOf="@+id/toolbar4"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

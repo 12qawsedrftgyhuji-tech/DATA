@@ -26,7 +26,7 @@
         android:layout_marginTop="60dp"
         android:ems="10"
         android:hint="사용자명"
-        android:inputType="textPassword"
+        android:inputType="text"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
@@ -34,37 +34,45 @@
 
     <EditText
         android:id="@+id/tv_mainText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="226dp"
+        android:layout_height="294dp"
         android:layout_marginTop="60dp"
         android:ems="10"
         android:hint="본문"
-        android:inputType="text"
+        android:inputType="textMultiLine"
+        android:gravity="top|start"
+        android:scrollHorizontally="false"
+        android:overScrollMode="always"
+        android:scrollbarStyle="insideOverlay"
+        android:scrollbars="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv_author" />
+        app:layout_constraintTop_toBottomOf="@+id/tv_author"
+        app:layout_constraintVertical_bias="0.0"
+        />
 
-    <EditText
-        android:id="@+id/나이입력"
+    <Button
+        android:id="@+id/btn_post"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
-        android:ems="10"
-        android:hint="나이를 입력해 주세요."
-        android:inputType="text"
+        android:text="Post"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.309"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_mainText" />
 
-    <EditText
-        android:id="@+id/전번입력"
+    <Button
+        android:id="@+id/btn_cancel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
-        android:ems="10"
-        android:hint="전화번호을 입력해 주세요."
-        android:inputType="number"
+        android:text="Cancel"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/나이입력" />
+        app:layout_constraintHorizontal_bias="0.24"
+        app:layout_constraintStart_toEndOf="@+id/btn_post"
+        app:layout_constraintTop_toBottomOf="@+id/tv_mainText" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

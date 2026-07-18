@@ -21,7 +21,10 @@
             android:name=".ai"
             android:exported="false" />
         <activity
-            android:name=".home"
+            android:name=".manage_home"
+            android:exported="false" />
+        <activity
+            android:name=".postdt"
             android:exported="false" />
         <activity
             android:name=".record"

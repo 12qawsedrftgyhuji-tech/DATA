@@ -77,6 +77,7 @@ class login : AppCompatActivity() {
                                     val account = UserAccount()
                                     account.idToken = user.uid
                                     account.emailId = user.email//auth.currentUser.email이랑 동치
+                                    account.name = user.displayName
                                     mDatabaseRef.child("UserAccount").child(user.uid).setValue(account)
 
                                     // 2. 정보 수정(가입 완료) 화면으로 보냄

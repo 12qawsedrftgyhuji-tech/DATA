@@ -25,11 +25,11 @@ class ai : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        mBtnSchedule4 = findViewById(R.id.scheduleai)
-        mBtnRecord4 = findViewById(R.id.recordai)
-        mBtnHome4 = findViewById(R.id.homeai)
-        mBtnAi4 = findViewById(R.id.aiai)
-        mBtnProfile4 = findViewById(R.id.profileai)
+        mBtnSchedule4 = findViewById(R.id.schedule)
+        mBtnRecord4 = findViewById(R.id.record)
+        mBtnHome4 = findViewById(R.id.home)
+        mBtnAi4 = findViewById(R.id.ai)
+        mBtnProfile4 = findViewById(R.id.profile)
 
         mBtnAi4.setTextColor(Color.BLACK)
 

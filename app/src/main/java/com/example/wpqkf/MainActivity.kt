@@ -3,19 +3,69 @@ package com.example.wpqkf
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.widget.Button
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import android.view.View
+import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
+import android.widget.TextView
+import androidx.recyclerview.widget.LinearLayoutManager
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var mBtnSchedule: Button
-    private lateinit var mBtnRecord: Button
-    private lateinit var mBtnHome: Button
-    private lateinit var mBtnAi: Button
-    private lateinit var mBtnProfile: Button
+    private lateinit var mBtnSchedule4: Button
+    private lateinit var mBtnRecord4: Button
+    private lateinit var mBtnHome4: Button
+    private lateinit var mBtnAi4: Button
+    private lateinit var mBtnManage: Button
+    private lateinit var mBtnProfile4: Button
+    private lateinit var database: DatabaseReference
+    private lateinit var mFirebaseAuth: FirebaseAuth
+    private lateinit var mDatabaseRef: DatabaseReference
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var postAdapter: PostAdapter
+    private lateinit var postList: ArrayList<Post>
+
+    private fun readPostsFromDatabase() {
+        // 파이어베이스의 "posts" 경로를 실시간 감지
+        mDatabaseRef.child("posts").addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                // 데이터가 바뀔 때마다 상자를 한 번 비우기(중복 방지)
+                postList.clear()
+
+                // posts 폴더 안의 모든 글들을 하나씩 꺼내옴
+                for (postSnapshot in snapshot.children) {
+                    val post = postSnapshot.getValue(Post::class.java)
+                    if (post != null) {
+                        // *********** 상세화면 갈 때 키를 쓸거임
+                        // 파이어베이스가 생성한 고유 키값(가장 상위 폴더 이름)을 uid나 별도 변수에 박아줌
+                        //  post 객체의 uid 변수에 postSnapshot.key를 임시로 대입
+                        val updatedPost = post.copy(uid = postSnapshot.key)
+
+                        postList.add(updatedPost)
+                    }
+                }
+
+                // 어댑터가 다시 그리게 ㄱ
+                postAdapter.notifyDataSetChanged()
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                // 실패했을 때 로그 찍기
+                android.util.Log.e("FirebaseError", "데이터 읽기 실패: ${error.message}")
+            }
+        })
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,33 +76,119 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        mBtnSchedule = findViewById(R.id.scheduleho)
-        mBtnRecord = findViewById(R.id.recordho)
-        mBtnHome = findViewById(R.id.homeho)
-        mBtnAi = findViewById(R.id.aiho)
-        mBtnProfile = findViewById(R.id.profileho)
+        mFirebaseAuth = FirebaseAuth.getInstance()
+        mDatabaseRef = FirebaseDatabase.getInstance().reference
+        val firebaseUser = mFirebaseAuth.currentUser
 
-        mBtnHome.setTextColor(Color.BLACK)
 
-        mBtnSchedule.setOnClickListener {
+        //내비게이션바 작업-------------------------
+        mBtnSchedule4 = findViewById(R.id.schedule)
+        mBtnRecord4 = findViewById(R.id.record)
+        mBtnHome4 = findViewById(R.id.home)
+        mBtnAi4 = findViewById(R.id.ai)
+        mBtnProfile4 = findViewById(R.id.profile)
+        mBtnManage = findViewById(R.id.manage)
+        mBtnHome4.setTextColor(Color.BLACK)
+        mBtnManage.visibility = View.GONE
+
+        mBtnHome4.setOnClickListener {
+
+        }
+        mBtnSchedule4.setOnClickListener {
             val intent = Intent(this@MainActivity, schedule::class.java)
             startActivity(intent)
             finish()
         }
-        mBtnRecord.setOnClickListener {
+        mBtnRecord4.setOnClickListener {
             val intent = Intent(this@MainActivity, record::class.java)
+
             startActivity(intent)
             finish()
         }
-        mBtnAi.setOnClickListener {
-            val intent = Intent(this@MainActivity, ai::class.java)
-            startActivity(intent)
-            finish()
-        }
-        mBtnProfile.setOnClickListener {
+        mBtnProfile4.setOnClickListener {
             val intent = Intent(this@MainActivity, profile::class.java)
             startActivity(intent)
             finish()
         }
+        mBtnAi4.setOnClickListener {
+            val intent = Intent(this@MainActivity, ai::class.java)
+            startActivity(intent)
+            finish()
+        }
+        //내비게이션 바 작업 완---------------------------
+
+        //read 기능 구현ㄱ
+        recyclerView = findViewById(R.id.recyclerViewPosts) // main.xml에 만든 RecyclerView ID
+        recyclerView.layoutManager = LinearLayoutManager(this) // 한 줄씩 세로로 쌓기
+
+        recyclerView.setHasFixedSize(true)
+
+        // 3. 빈 상자를 만들고 어댑터에 주입한 뒤, 리사이클러뷰에 장착 (recyclerview가 실시간으로, 스크롤 가능하게 게시글을 보여줌)
+        postList = arrayListOf()
+        postAdapter = PostAdapter(postList)
+        recyclerView.adapter = postAdapter
+
+        // firebase에서 데이터 긁어오기
+        readPostsFromDatabase()
+
+        //만약 접속한 사람이 developer라면, 게시물을 올릴 수 있도록 설정 (버튼이 보이게)------------------
+
+        if (firebaseUser != null) {
+            mDatabaseRef.child("UserAccount").child(firebaseUser.uid).addListenerForSingleValueEvent(object :
+                ValueEventListener {
+                //정보를 가져오는데 성공하면 자동으로 호출되는 함수
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    //가져온 정보를 변수 안에 형식에 맞게 가져오기
+                    val account = snapshot.getValue(user.UserAccount::class.java)
+                    if (account?.emailId == null) {
+                        //이메일을 다시 가져오자
+                        account?.emailId = mFirebaseAuth.currentUser?.email
+                    }
+                    val isdeveloper= (account?.emailId=="h_s_posan25_1219@dge.go.kr")
+                    if (isdeveloper) {
+                        mBtnManage.visibility = View.VISIBLE
+                    } else {
+                        mBtnManage.visibility = View.GONE
+                    }
+                }
+                override fun onCancelled(error: DatabaseError) {
+                }
+            })
+        }
+        mBtnManage.setOnClickListener {
+            val intent = Intent(this@MainActivity, manage_home::class.java)
+            startActivity(intent)
+        }
     }
+    inner class PostAdapter(private val postList: ArrayList<Post>)://manage_home.dt에서 올린 Post 객체를 매개변수로 준다
+        RecyclerView.Adapter<PostAdapter.PostViewHolder>(){
+        override fun onCreateViewHolder(p0: ViewGroup, p1: Int): PostViewHolder {
+            val view = LayoutInflater.from(p0.context).inflate(R.layout.item_post,p0, false)
+            return PostViewHolder(view)
+        }
+        override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
+            val currentPost = postList[position]
+            holder.title.text = currentPost.title
+            holder.author.text = currentPost.author
+
+            holder.itemView.setOnClickListener {
+                val context = holder.itemView.context
+                val intent = Intent(context, postdt::class.java)
+                intent.apply{
+                    putExtra("post_key", currentPost.uid)
+                    context.startActivity(this)
+                }
+            }
+        }
+
+        override fun getItemCount(): Int {
+            return postList.size
+        }
+
+        // 어댑터가 사용할 뷰홀더 그릇 클래스
+        inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val title: TextView = itemView.findViewById(R.id.tvItemTitle)
+            val author: TextView = itemView.findViewById(R.id.tvItemAuthor)
+        }
+        }
 }

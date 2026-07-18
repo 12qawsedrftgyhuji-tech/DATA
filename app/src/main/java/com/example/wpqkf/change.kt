@@ -107,7 +107,7 @@ class change : AppCompatActivity() {
             //사용자의 고유 번호로 들어가서 이메일 칸을 찾고 데이터는 한번만 일고 파이어베이스에 정보 요청하기
             mDatabaseRef.child(firebaseUser.uid).addListenerForSingleValueEvent(object :
                 ValueEventListener {
-                //정보를 자져오는데 성공하면 자동으로 호출되는 함수
+                //정보를 가져오는데 성공하면 자동으로 호출되는 함수
                 override fun onDataChange(snapshot: DataSnapshot) {
                     //가져온 정보를 변수 안에 형식에 맞게 가져오기
                     val account = snapshot.getValue(user.UserAccount::class.java)

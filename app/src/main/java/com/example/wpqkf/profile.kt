@@ -117,11 +117,11 @@ class profile : AppCompatActivity() {
                 finish()
             }
         }
-        mBtnSchedule5 = findViewById(R.id.schedulepr)
-        mBtnRecord5 = findViewById(R.id.recordpr)
-        mBtnHome5 = findViewById(R.id.homepr)
-        mBtnAi5 = findViewById(R.id.aipr)
-        mBtnProfile5 = findViewById(R.id.profilepr)
+        mBtnSchedule5 = findViewById(R.id.schedule)
+        mBtnRecord5 = findViewById(R.id.record)
+        mBtnHome5 = findViewById(R.id.home)
+        mBtnAi5 = findViewById(R.id.ai)
+        mBtnProfile5 = findViewById(R.id.profile)
         mBtnChange = findViewById(R.id.change)
         mBtnLogout = findViewById(R.id.logout)
 
