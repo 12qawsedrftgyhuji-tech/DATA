@@ -31,6 +31,8 @@ data class Post(
     var title: String? = "",
     var body: String? = "",
     var category: String? = "",
+    var status: String?= "pending",
+    var authEmail : String= "",
     var starCount: Int = 0,
     var stars: Map<String, Boolean> = HashMap()
 ) {
@@ -43,6 +45,8 @@ data class Post(
             "title" to title,
             "body" to body,
             "category" to category,
+            "status" to status,
+            "authEmail" to authEmail,
             "starCount" to starCount,
             "stars" to stars,
         )
@@ -54,7 +58,7 @@ class manage_home : AppCompatActivity() {
     private lateinit var database: DatabaseReference
     private lateinit var mFirebaseAuth: FirebaseAuth
     private lateinit var mDatabaseRef: DatabaseReference
-    fun writeNewpost(userId: String, name: String, title: String, body :String, category: String) {
+    fun writeNewpost(userId: String, name: String, title: String, body :String, category: String, authEmail: String) {
         val key = database.child("posts").push().key
         if (key == null) {
             return
@@ -64,7 +68,9 @@ class manage_home : AppCompatActivity() {
             author = name,
             title = title,
             body = body,
-            category = category
+            category = category,
+            status = "approved",
+            authEmail = authEmail
         )
         val postValues = post.toMap()
         val childUpdates = hashMapOf<String, Any>(
@@ -87,6 +93,7 @@ class manage_home : AppCompatActivity() {
         enableEdgeToEdge()
         database = Firebase.database.reference// 얘는 onCreate 안에 넣어야!
         setContentView(R.layout.activity_manage_home)/////////////////////////////
+        var account : user.UserAccount? = null
         val mtitle : EditText = findViewById(R.id.tv_title)
         val mauthor : TextView = findViewById(R.id.tv_author)
         val mmaintext : EditText = findViewById(R.id.tv_mainText)
@@ -103,13 +110,7 @@ class manage_home : AppCompatActivity() {
                 //정보를 가져오는데 성공하면 자동으로 호출되는 함수
                 override fun onDataChange(snapshot: DataSnapshot) {
                     //가져온 정보를 변수 안에 형식에 맞게 가져오기
-                    val account = snapshot.getValue(user.UserAccount::class.java)
-                    if (account != null && ! account.name.isNullOrEmpty()) {
-                        mauthor.setText(account.name)
-                    } else {
-                        val googleName = mFirebaseAuth.currentUser?.displayName
-                        mauthor.setText(googleName ?: "관리자")
-                    }
+                    account = snapshot.getValue(user.UserAccount::class.java)
                 }
                 override fun onCancelled(error: DatabaseError) {
                 }
@@ -150,12 +151,28 @@ class manage_home : AppCompatActivity() {
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+        if (firebaseUser != null) {
+            mDatabaseRef.child("UserAccount").child(firebaseUser.uid).addListenerForSingleValueEvent(object :
+                ValueEventListener {
+                //정보를 가져오는데 성공하면 자동으로 호출되는 함수
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    //가져온 정보를 변수 안에 형식에 맞게 가져오기
+                    account = snapshot.getValue(user.UserAccount::class.java)
+                    if (account?.emailId == null) {
+                        //이메일을 다시 가져오자
+                        account?.emailId = mFirebaseAuth.currentUser?.email
+                    }
+                }
+                override fun onCancelled(error: DatabaseError) {
+                }
+            })
+        }
         postBtn.setOnClickListener {
             val titletext = mtitle.text.toString().trim()
             val authortext = mauthor.text.toString().trim()
             val bodytext = mmaintext.text.toString().trim()
             if (titletext.isNotEmpty() && authortext.isNotEmpty() &&bodytext.isNotEmpty() &&(firebaseUser!=null)){
-                writeNewpost(userId= firebaseUser.uid, name= authortext, title= titletext, body=bodytext, category =  selectedCategory)
+                writeNewpost(userId= firebaseUser.uid, name= authortext, title= titletext, body=bodytext, category =  selectedCategory, authEmail = account?.emailId?:"")
                 val intent = Intent(this@manage_home, MainActivity::class.java)
                 startActivity(intent)
                 finish()

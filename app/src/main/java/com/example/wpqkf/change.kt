@@ -88,7 +88,7 @@ class change : AppCompatActivity() {
             }
         }
 
-        //버튼 또는 이미지를 누르면 갤러리가 열리도록 함
+        //이미지를 누르면 갤러리가 열리도록 함
         mIvProfile.setOnClickListener {
             val intent = Intent(Intent.ACTION_PICK)
             intent.type = "image/*"
