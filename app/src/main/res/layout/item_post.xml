@@ -11,6 +11,15 @@
     tools:layout_editor_absoluteY="75dp">
 
     <TextView
+        android:id="@+id/tvItemCategory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="[카테고리]"
+        android:textColor="#3F51B5"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+    <TextView
         android:id="@+id/tvItemTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

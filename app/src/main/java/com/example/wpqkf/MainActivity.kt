@@ -17,18 +17,22 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.ImageButton
+import android.widget.Spinner
 import androidx.recyclerview.widget.RecyclerView
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var mBtnSchedule4: Button
-    private lateinit var mBtnRecord4: Button
-    private lateinit var mBtnHome4: Button
-    private lateinit var mBtnAi4: Button
+    private lateinit var mBtnSchedule4: ImageButton
+    private lateinit var mBtnRecord4: ImageButton
+    private lateinit var mBtnHome4: ImageButton
+    private lateinit var mBtnAi4: ImageButton
     private lateinit var mBtnManage: Button
-    private lateinit var mBtnProfile4: Button
+    private lateinit var mBtnProfile4: ImageButton
     private lateinit var database: DatabaseReference
     private lateinit var mFirebaseAuth: FirebaseAuth
     private lateinit var mDatabaseRef: DatabaseReference
@@ -36,13 +40,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var postAdapter: PostAdapter
     private lateinit var postList: ArrayList<Post>
 
+    private lateinit var allPostsList: ArrayList<Post> // 전체 원본 데이터
+    private val categories = arrayListOf("전체", "키오스크", "예매 방법","모바일 앱 결제", "PC앱 결제") // 필터 목록
+
     private fun readPostsFromDatabase() {
         // 파이어베이스의 "posts" 경로를 실시간 감지
         mDatabaseRef.child("posts").addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 // 데이터가 바뀔 때마다 상자를 한 번 비우기(중복 방지)
-                postList.clear()
-
+                allPostsList.clear()
                 // posts 폴더 안의 모든 글들을 하나씩 꺼내옴
                 for (postSnapshot in snapshot.children) {
                     val post = postSnapshot.getValue(Post::class.java)
@@ -52,12 +58,11 @@ class MainActivity : AppCompatActivity() {
                         //  post 객체의 uid 변수에 postSnapshot.key를 임시로 대입
                         val updatedPost = post.copy(uid = postSnapshot.key)
 
-                        postList.add(updatedPost)
+                        allPostsList.add(updatedPost)
                     }
                 }
-
-                // 어댑터가 다시 그리게 ㄱ
-                postAdapter.notifyDataSetChanged()
+                val currentFilter = findViewById<Spinner>(R.id.spinner_filter).selectedItem.toString()
+                filterPosts(currentFilter)
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -65,6 +70,20 @@ class MainActivity : AppCompatActivity() {
                 android.util.Log.e("FirebaseError", "데이터 읽기 실패: ${error.message}")
             }
         })
+    }
+
+    private fun filterPosts(category: String) {
+        postList.clear()
+        if (category == "전체"){
+            postList.addAll(allPostsList)
+        } else {
+            for (post in allPostsList){
+                if (post.category == category) {
+                    postList.add(post)
+                }
+            }
+        }
+        postAdapter.notifyDataSetChanged()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,6 +98,22 @@ class MainActivity : AppCompatActivity() {
         mFirebaseAuth = FirebaseAuth.getInstance()
         mDatabaseRef = FirebaseDatabase.getInstance().reference
         val firebaseUser = mFirebaseAuth.currentUser
+        val spinnerFilter: Spinner = findViewById(R.id.spinner_filter)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, categories)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerFilter.adapter = adapter
+
+        allPostsList = arrayListOf()
+
+        spinnerFilter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener{
+            override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
+                val selected = categories[position]
+                filterPosts(selected)
+            }
+
+            override fun onNothingSelected(p0: AdapterView<*>?) {
+            }
+        }
 
 
         //내비게이션바 작업-------------------------
@@ -88,7 +123,6 @@ class MainActivity : AppCompatActivity() {
         mBtnAi4 = findViewById(R.id.ai)
         mBtnProfile4 = findViewById(R.id.profile)
         mBtnManage = findViewById(R.id.manage)
-        mBtnHome4.setTextColor(Color.BLACK)
         mBtnManage.visibility = View.GONE
 
         mBtnHome4.setOnClickListener {
@@ -170,6 +204,7 @@ class MainActivity : AppCompatActivity() {
             val currentPost = postList[position]
             holder.title.text = currentPost.title
             holder.author.text = currentPost.author
+            holder.category.text = "[${currentPost.category}]"
 
             holder.itemView.setOnClickListener {
                 val context = holder.itemView.context
@@ -189,6 +224,8 @@ class MainActivity : AppCompatActivity() {
         inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val title: TextView = itemView.findViewById(R.id.tvItemTitle)
             val author: TextView = itemView.findViewById(R.id.tvItemAuthor)
+            val category: TextView = itemView.findViewById(R.id.tvItemCategory) // 추가
+
         }
         }
 }

@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -21,11 +22,11 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
 
 class postdt : AppCompatActivity() {
-    private lateinit var mBtnSchedule: Button
-    private lateinit var mBtnRecord: Button
-    private lateinit var mBtnHome: Button
-    private lateinit var mBtnAi: Button
-    private lateinit var mBtnProfile: Button
+    private lateinit var mBtnSchedule: ImageButton
+    private lateinit var mBtnRecord: ImageButton
+    private lateinit var mBtnHome: ImageButton
+    private lateinit var mBtnAi: ImageButton
+    private lateinit var mBtnProfile: ImageButton
     private lateinit var database : DatabaseReference
     private lateinit var btnPrev : Button
     private lateinit var btnNext : Button
@@ -41,6 +42,7 @@ class postdt : AppCompatActivity() {
         val tvTitle = findViewById<TextView>(R.id.tvDtTitle)
         val tvAuthor = findViewById<TextView>(R.id.tvDtAuthor)
         val tvBody = findViewById<TextView>(R.id.tvDtBody)
+        val tvCategory = findViewById<TextView>(R.id.tvDtCategory)
 
         database = Firebase.database.reference
 
@@ -57,6 +59,7 @@ class postdt : AppCompatActivity() {
                     tvTitle.text = post.title
                     tvAuthor.text = post.author
                     tvBody.text = post.body
+                    tvCategory.text = "[${post.category}]"
                 }
             }.addOnFailureListener {
                 // 오류가 났을 때:
@@ -77,8 +80,6 @@ class postdt : AppCompatActivity() {
         btnNext = findViewById(R.id.btnright)
         btndelete = findViewById(R.id.btndelete)
         btnmodify = findViewById(R.id.btnmodify)
-
-        mBtnHome.setTextColor(Color.BLACK)
 
         mBtnSchedule.setOnClickListener {
             val intent = Intent(this, schedule::class.java)
@@ -138,6 +139,7 @@ class postdt : AppCompatActivity() {
                 database.child("posts").child(postKey).removeValue()
                     .addOnSuccessListener {
                         Toast.makeText(this,"삭제를 완료했습니다.",Toast.LENGTH_SHORT).show()
+
                     }
                     .addOnFailureListener {
                         Toast.makeText(this,"에러: 삭제 실패",Toast.LENGTH_SHORT).show()

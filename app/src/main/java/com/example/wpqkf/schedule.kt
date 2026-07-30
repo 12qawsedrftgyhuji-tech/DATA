@@ -4,17 +4,18 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ImageButton
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
 class schedule : AppCompatActivity() {
-    private lateinit var mBtnSchedule3: Button
-    private lateinit var mBtnRecord3: Button
-    private lateinit var mBtnHome3: Button
-    private lateinit var mBtnAi3: Button
-    private lateinit var mBtnProfile3: Button
+    private lateinit var mBtnSchedule3: ImageButton
+    private lateinit var mBtnRecord3: ImageButton
+    private lateinit var mBtnHome3: ImageButton
+    private lateinit var mBtnAi3: ImageButton
+    private lateinit var mBtnProfile3: ImageButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,13 +26,11 @@ class schedule : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        mBtnSchedule3 = findViewById(R.id.schedulesc)
-        mBtnRecord3 = findViewById(R.id.recordsc)
-        mBtnHome3 = findViewById(R.id.homesc)
-        mBtnAi3 = findViewById(R.id.aisc)
-        mBtnProfile3 = findViewById(R.id.profilesc)
-
-        mBtnSchedule3.setTextColor(Color.BLACK)
+        mBtnSchedule3 = findViewById(R.id.schedule)
+        mBtnRecord3 = findViewById(R.id.record)
+        mBtnHome3 = findViewById(R.id.home)
+        mBtnAi3 = findViewById(R.id.ai)
+        mBtnProfile3 = findViewById(R.id.profile)
 
         mBtnHome3.setOnClickListener {
             val intent = Intent(this@schedule, MainActivity::class.java)

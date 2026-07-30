@@ -3,10 +3,16 @@ package com.example.wpqkf
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -24,6 +30,7 @@ data class Post(
     var author: String? = "",
     var title: String? = "",
     var body: String? = "",
+    var category: String? = "",
     var starCount: Int = 0,
     var stars: Map<String, Boolean> = HashMap()
 ) {
@@ -35,6 +42,7 @@ data class Post(
             "author" to author,
             "title" to title,
             "body" to body,
+            "category" to category,
             "starCount" to starCount,
             "stars" to stars,
         )
@@ -46,7 +54,7 @@ class manage_home : AppCompatActivity() {
     private lateinit var database: DatabaseReference
     private lateinit var mFirebaseAuth: FirebaseAuth
     private lateinit var mDatabaseRef: DatabaseReference
-    fun writeNewpost(userId: String, name: String, title: String, body :String) {
+    fun writeNewpost(userId: String, name: String, title: String, body :String, category: String) {
         val key = database.child("posts").push().key
         if (key == null) {
             return
@@ -55,7 +63,8 @@ class manage_home : AppCompatActivity() {
             uid = userId,
             author = name,
             title = title,
-            body = body
+            body = body,
+            category = category
         )
         val postValues = post.toMap()
         val childUpdates = hashMapOf<String, Any>(
@@ -79,10 +88,11 @@ class manage_home : AppCompatActivity() {
         database = Firebase.database.reference// 얘는 onCreate 안에 넣어야!
         setContentView(R.layout.activity_manage_home)/////////////////////////////
         val mtitle : EditText = findViewById(R.id.tv_title)
-        val mauthor : EditText = findViewById(R.id.tv_author)
+        val mauthor : TextView = findViewById(R.id.tv_author)
         val mmaintext : EditText = findViewById(R.id.tv_mainText)
         val postBtn : Button = findViewById(R.id.btn_post)
         val CancelBtn : Button = findViewById(R.id.btn_cancel)
+        val spinnerCt : Spinner = findViewById(R.id.spinner_category)
         mFirebaseAuth = FirebaseAuth.getInstance()
         mDatabaseRef =
             FirebaseDatabase.getInstance().getReference("UserAccount")
@@ -94,22 +104,58 @@ class manage_home : AppCompatActivity() {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     //가져온 정보를 변수 안에 형식에 맞게 가져오기
                     val account = snapshot.getValue(user.UserAccount::class.java)
-                    if (account != null) {
-                        mauthor.setText("${account.name}")
+                    if (account != null && ! account.name.isNullOrEmpty()) {
+                        mauthor.setText(account.name)
                     } else {
-                        mauthor.setText("관리자")
+                        val googleName = mFirebaseAuth.currentUser?.displayName
+                        mauthor.setText(googleName ?: "관리자")
                     }
                 }
                 override fun onCancelled(error: DatabaseError) {
                 }
             })
         }
+        val categories = arrayListOf("키오스크", "예매 방법","모바일 앱 결제", "PC앱 결제", "직접 입력")
+
+        // 어댑터 연결 (목록과 디자인을 연결)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, categories)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerCt.adapter = adapter
+
+        var selectedCategory = ""
+        spinnerCt.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (categories[position] == "직접 입력") {
+                    val builder = AlertDialog.Builder(this@manage_home)
+                    builder.setTitle("새 종류 추가")
+                    val input = EditText(this@manage_home)
+                    builder.setView(input)
+                    builder.setPositiveButton("추가") { _, _ ->
+                        val newCat = input.text.toString().trim()
+                        if (newCat.isNotEmpty()) {
+                            categories.add(categories.size - 1, newCat)
+                            adapter.notifyDataSetChanged()
+                            spinnerCt.setSelection(categories.indexOf(newCat)) // 새로 만든 것 바로 선택
+                            selectedCategory = newCat
+                        }
+                    }
+                    builder.setNegativeButton("취소") { dialog, _ ->
+                        dialog.cancel()
+                        spinnerCt.setSelection(0) // 취소하면 다시 "메인"으로
+                    }
+                    builder.show()
+                } else {
+                    selectedCategory = categories[position]
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
         postBtn.setOnClickListener {
             val titletext = mtitle.text.toString().trim()
             val authortext = mauthor.text.toString().trim()
             val bodytext = mmaintext.text.toString().trim()
             if (titletext.isNotEmpty() && authortext.isNotEmpty() &&bodytext.isNotEmpty() &&(firebaseUser!=null)){
-                writeNewpost(userId= firebaseUser.uid, name= authortext, title= titletext, body=bodytext)
+                writeNewpost(userId= firebaseUser.uid, name= authortext, title= titletext, body=bodytext, category =  selectedCategory)
                 val intent = Intent(this@manage_home, MainActivity::class.java)
                 startActivity(intent)
                 finish()

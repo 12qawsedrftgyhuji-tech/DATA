@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -25,12 +26,12 @@ import kotlinx.coroutines.launch
 
 class profile : AppCompatActivity() {
     //이동버튼들
-    private lateinit var mBtnSchedule5: Button
-    private lateinit var mBtnRecord5: Button
-    private lateinit var mBtnHome5: Button
-    private lateinit var mBtnAi5: Button
-    private lateinit var mBtnProfile5: Button
-    private lateinit var mBtnChange: Button
+    private lateinit var mBtnSchedule5: ImageButton
+    private lateinit var mBtnRecord5: ImageButton
+    private lateinit var mBtnHome5: ImageButton
+    private lateinit var mBtnAi5: ImageButton
+    private lateinit var mBtnProfile5: ImageButton
+    private lateinit var mBtnChange: ImageButton
     private lateinit var mBtnLogout: Button
     //프로필화면에 이메일정보를 가져올 정보들
     private lateinit var mFirebaseAuth: FirebaseAuth
@@ -39,6 +40,7 @@ class profile : AppCompatActivity() {
     private lateinit var mTvName: TextView
     private lateinit var mTvAge: TextView
     private lateinit var mTvNickmame: TextView
+    private lateinit var mTvTitlename: TextView
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,7 +60,7 @@ class profile : AppCompatActivity() {
         mTvName = findViewById(R.id.tv_profile_name)
         mTvAge = findViewById(R.id.tv_profile_age)
         mTvNickmame = findViewById(R.id.tv_profile_nickname)
-
+        mTvTitlename = findViewById(R.id.tv_profile_title_name)
 
         //로그인 정보 가져오기
         val firebaseUser = mFirebaseAuth.currentUser
@@ -76,6 +78,7 @@ class profile : AppCompatActivity() {
                         account?.emailId = mFirebaseAuth.currentUser?.email
                     }
                     if (account != null) {
+                        mTvTitlename.text = account.name
                         mTvEmail.text = "이메일: " + account.emailId
                         mTvName.text = "이름: " + account.name
                         mTvAge.text = "나이: " + account.age
@@ -124,8 +127,6 @@ class profile : AppCompatActivity() {
         mBtnProfile5 = findViewById(R.id.profile)
         mBtnChange = findViewById(R.id.change)
         mBtnLogout = findViewById(R.id.logout)
-
-        mBtnProfile5.setTextColor(Color.BLACK)
 
         mBtnHome5.setOnClickListener {
             val intent = Intent(this@profile, MainActivity::class.java)
