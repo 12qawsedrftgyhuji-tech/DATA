@@ -55,14 +55,11 @@
             android:layout_marginVertical="16dp"
             android:background="@android:color/darker_gray" />
 
-        <TextView
-            android:id="@+id/tvDtBody"
+        <WebView
+            android:id="@+id/wvDtBody"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:lineSpacingExtra="4dp"
-            android:text="본문 내용"
-            android:textColor="@android:color/black"
-            android:textSize="16sp" />
+            android:minHeight="200dp" />
     </LinearLayout>
     <!-- 주석 : button-->
     <LinearLayout

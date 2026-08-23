@@ -20,6 +20,7 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
+import android.webkit.WebView
 
 class postdt : AppCompatActivity() {
     private lateinit var mBtnSchedule: ImageButton
@@ -41,7 +42,8 @@ class postdt : AppCompatActivity() {
         setContentView(R.layout.activity_postdt)
         val tvTitle = findViewById<TextView>(R.id.tvDtTitle)
         val tvAuthor = findViewById<TextView>(R.id.tvDtAuthor)
-        val tvBody = findViewById<TextView>(R.id.tvDtBody)
+        val wvBody = findViewById<WebView>(R.id.wvDtBody)
+        wvBody.settings.javaScriptEnabled = false
         val tvCategory = findViewById<TextView>(R.id.tvDtCategory)
 
         database = Firebase.database.reference
@@ -55,11 +57,22 @@ class postdt : AppCompatActivity() {
                 val post = snapshot.getValue(Post::class.java)
 
                 if (post != null) {
-                    // 가져온 데이터를 텍스트 뷰에 넣어주기
                     tvTitle.text = post.title
                     tvAuthor.text = post.author
-                    tvBody.text = post.body
                     tvCategory.text = "[${post.category}]"
+
+                    val bodyHtml = post.body ?: ""
+                    val fullHtml = """
+        <html><head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body { margin:0; padding:0; font-family:sans-serif; font-size:16px; line-height:1.6; color:#000000; }
+            img { max-width:100%; height:auto; display:block; margin:6px 0; border-radius:6px; }
+        </style>
+        </head><body>$bodyHtml</body></html>
+    """.trimIndent()
+
+                    wvBody.loadDataWithBaseURL(null, fullHtml, "text/html", "UTF-8", null)
                 }
             }.addOnFailureListener {
                 // 오류가 났을 때:
