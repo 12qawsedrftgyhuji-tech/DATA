@@ -116,6 +116,7 @@ class manage_home : AppCompatActivity() {
                 }
             })
         }
+        mauthor.setText("관리자")
         val categories = arrayListOf("키오스크", "예매 방법","모바일 앱 결제", "PC앱 결제", "직접 입력")
 
         // 어댑터 연결 (목록과 디자인을 연결)

@@ -179,7 +179,13 @@ class MainActivity : AppCompatActivity() {
                         account?.emailId = mFirebaseAuth.currentUser?.email
                     }
                     val isdeveloper= (account?.emailId=="h_s_posan25_1219@dge.go.kr")
+                    val isdeveloper2= (account?.emailId=="guest@gmail.com")
                     if (isdeveloper) {
+                        mBtnManage.visibility = View.VISIBLE
+                    } else {
+                        mBtnManage.visibility = View.GONE
+                    }
+                    if (isdeveloper2) {
                         mBtnManage.visibility = View.VISIBLE
                     } else {
                         mBtnManage.visibility = View.GONE
