@@ -12,7 +12,7 @@
         android:id="@+id/tv_title"
         android:layout_width="203dp"
         android:layout_height="50dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="40dp"
         android:ems="10"
         android:hint="제목을 입력해주세요"
         android:inputType="text"
@@ -24,14 +24,14 @@
         android:id="@+id/tv_author"
         android:layout_width="202dp"
         android:layout_height="40dp"
-        android:layout_marginTop="25dp"
+        android:layout_marginTop="20dp"
         android:ems="10"
         android:hint="사용자명"
         android:inputType="text"
         android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@+id/spinner_category"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_bias="0.502"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_title"
         app:layout_constraintVertical_bias="0.0" />
@@ -40,9 +40,10 @@
         android:id="@+id/spinner_category"
         android:layout_width="250dp"
         android:layout_height="42dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="8dp"
         android:padding="10dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.496"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_author" />
 
@@ -50,7 +51,7 @@
         android:id="@+id/btn_pick_image"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="5dp"
         android:text="사진 추가"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.866"
@@ -59,14 +60,15 @@
 
     <WebView
         android:id="@+id/wv_mainText"
-        android:layout_width="327dp"
-        android:layout_height="343dp"
-        android:layout_marginBottom="128dp"
+        android:layout_width="395dp"
+        android:layout_height="419dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="40dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/spinner_category"
-        app:layout_constraintVertical_bias="1.0" />
+        app:layout_constraintVertical_bias="0.335" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btn_post"
@@ -75,7 +77,7 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
 
-        android:layout_marginBottom="44dp"
+        android:layout_marginBottom="36dp"
         android:background="@drawable/rectangle_1"
         android:text="POST"
         android:textColor="#FFFFFF"
@@ -94,7 +96,7 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
 
-        android:layout_marginBottom="44dp"
+        android:layout_marginBottom="36dp"
         android:background="@drawable/rectangle_2"
         android:text="Cancel"
         android:textColor="#FF4D4D"

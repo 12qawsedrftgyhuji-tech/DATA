@@ -7,16 +7,17 @@
     android:layout_height="match_parent"
     tools:context=".postdt">
 
+    <!-- 주석 : button-->
     <LinearLayout
         android:id="@+id/contentLayout"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_width="407dp"
+        android:layout_height="576dp"
         android:layout_marginBottom="8dp"
         android:orientation="vertical"
         android:padding="16dp"
         app:layout_constraintBottom_toTopOf="@id/bottomButtonLayout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0">
@@ -25,11 +26,12 @@
             android:id="@+id/tvDtCategory"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="15dp"
             android:text="카테고리"
             android:textColor="#3F51B5"
             android:textSize="15sp"
             android:textStyle="bold" />
+
         <TextView
             android:id="@+id/tvDtTitle"
             android:layout_width="match_parent"
@@ -61,7 +63,7 @@
             android:layout_height="wrap_content"
             android:minHeight="200dp" />
     </LinearLayout>
-    <!-- 주석 : button-->
+
     <LinearLayout
         android:id="@+id/bottomButtonLayout"
         android:layout_width="match_parent"
