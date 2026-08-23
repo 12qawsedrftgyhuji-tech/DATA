@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    tools:context=".login">
+
+    <TextView
+        android:id="@+id/tv_title_assistant"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:layout_marginTop="108dp"
+        android:gravity="center"
+        android:letterSpacing="-0.01"
+        android:text="Assistant"
+        android:textColor="#000000"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/아이디입력"
+        android:layout_width="307dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="62dp"
+        android:background="@drawable/field"
+        android:ems="10"
+        android:hint="아이디"
+        android:inputType="textEmailAddress"
+        android:paddingHorizontal="12dp"
+        android:textColor="#000000"
+        android:textColorHint="#828282"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_title_assistant" />
+
+    <EditText
+        android:id="@+id/비번입력로그"
+        android:layout_width="307dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/field"
+        android:ems="10"
+        android:hint="비밀번호"
+        android:inputType="textPassword"
+        android:paddingHorizontal="12dp"
+        android:textColor="#000000"
+        android:textColorHint="#828282"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/아이디입력" />
+
+    <Button
+        android:id="@+id/로그인버튼"
+        android:layout_width="307dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/btn_black_bg"
+        android:text="로그인"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        app:backgroundTint="@null"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/비번입력로그" />
+
+    <View
+        android:id="@+id/divider_left"
+        android:layout_width="120dp"
+        android:layout_height="1dp"
+        android:layout_marginTop="30dp"
+        android:background="#E6E6E6"
+        app:layout_constraintEnd_toStartOf="@+id/tv_or"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/로그인버튼" />
+
+    <TextView
+        android:id="@+id/tv_or"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:text="또는"
+        android:textColor="#828282"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@+id/divider_left"
+        app:layout_constraintEnd_toStartOf="@+id/divider_right"
+        app:layout_constraintStart_toEndOf="@+id/divider_left"
+        app:layout_constraintTop_toTopOf="@+id/divider_left" />
+
+    <View
+        android:id="@+id/divider_right"
+        android:layout_width="120dp"
+        android:layout_height="1dp"
+        android:background="#E6E6E6"
+        app:layout_constraintBottom_toBottomOf="@+id/divider_left"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/tv_or"
+        app:layout_constraintTop_toTopOf="@+id/divider_left" />
+
+    <Button
+        android:id="@+id/회원가입버튼"
+        android:layout_width="307dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/btn_gray_bg"
+        android:text="회원가입"
+        android:textColor="#828282"
+        android:textSize="14sp"
+        app:backgroundTint="@null"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/divider_left" />
+
+    <com.google.android.gms.common.SignInButton
+        android:id="@+id/구글로그인버튼"
+        android:layout_width="307dp"
+        android:layout_height="44dp"
+        android:layout_marginTop="12dp"
+        app:buttonSize="wide"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/회원가입버튼" />
+
+    <TextView
+        android:id="@+id/tv_terms"
+        android:layout_width="327dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:gravity="center"
+        android:lineSpacingExtra="3sp"
+        android:text="계속을 클릭하면 당사의 서비스 이용약관 및 개인정보 처리방침에 동의하는 것으로 간주됩니다."
+        android:textColor="#828282"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
