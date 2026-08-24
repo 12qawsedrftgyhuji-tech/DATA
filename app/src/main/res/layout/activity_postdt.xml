@@ -10,8 +10,8 @@
     <!-- 주석 : button-->
     <LinearLayout
         android:id="@+id/contentLayout"
-        android:layout_width="407dp"
-        android:layout_height="576dp"
+        android:layout_width="411dp"
+        android:layout_height="588dp"
         android:layout_marginBottom="8dp"
         android:orientation="vertical"
         android:padding="16dp"
@@ -59,8 +59,8 @@
 
         <WebView
             android:id="@+id/wvDtBody"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_width="382dp"
+            android:layout_height="403dp"
             android:minHeight="200dp" />
     </LinearLayout>
 
@@ -70,18 +70,18 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        app:layout_constraintTop_toBottomOf="@id/contentLayout"
         app:layout_constraintBottom_toTopOf="@id/toolbar4"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toBottomOf="@id/contentLayout">
 
         <Button
             android:id="@+id/btnleft"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginStart="15dp"
             android:layout_marginEnd="15dp"
+            android:layout_weight="1"
             android:text="이전" />
 
         <Button
@@ -107,9 +107,9 @@
             android:id="@+id/btnright"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginStart="15dp"
             android:layout_marginEnd="15dp"
+            android:layout_weight="1"
             android:text="다음" />
 
 
