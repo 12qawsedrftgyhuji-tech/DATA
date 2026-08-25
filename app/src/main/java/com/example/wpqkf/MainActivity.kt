@@ -3,6 +3,7 @@ package com.example.wpqkf
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.widget.Button
 import androidx.activity.enableEdgeToEdge
@@ -190,29 +191,26 @@ class MainActivity : AppCompatActivity() {
         //만약 접속한 사람이 developer라면, 게시물을 올릴 수 있도록 설정 (버튼이 보이게)------------------
 
         if (firebaseUser != null) {
-            mDatabaseRef.child("UserAccount").child(firebaseUser.uid).addListenerForSingleValueEvent(object :
-                ValueEventListener {
-                //정보를 가져오는데 성공하면 자동으로 호출되는 함수
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    //가져온 정보를 변수 안에 형식에 맞게 가져오기
-                    val account = snapshot.getValue(user.UserAccount::class.java)
-                    val email = account?.emailId?.toString() ?: mFirebaseAuth.currentUser?.email
-                    val isdeveloper = (email == "h_s_posan25_1219@dge.go.kr")
-                    val isdeveloperfk = (email == "guest@gmail.com")
-                    if (isdeveloper) {
-                        mBtnManage.visibility = View.VISIBLE
-                    } else {
-                        mBtnManage.visibility = View.GONE
+            mDatabaseRef.child("UserAccount").child(firebaseUser.uid)
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        try {
+                            // 데이터 클래스로 자동 변환하지 않고 emailId 필드만 직접 문자열로 추출
+                            val email = snapshot.child("emailId").value?.toString()
+                                ?: mFirebaseAuth.currentUser?.email
+
+                            val isDeveloper = (email == "h_s_posan25_1219@dge.go.kr") || (email == "guest@gmail.com")
+                            mBtnManage.visibility = if (isDeveloper) View.VISIBLE else View.GONE
+                        } catch (e: Exception) {
+                            Log.e("FirebaseError", "유저 정보 읽기 실패: ${e.message}")
+                            mBtnManage.visibility = View.GONE
+                        }
                     }
-                    if (isdeveloperfk) {
-                        mBtnManage.visibility = View.VISIBLE
-                    } else {
-                        mBtnManage.visibility = View.GONE
+
+                    override fun onCancelled(error: DatabaseError) {
+                        Log.e("FirebaseError", "DB 오류: ${error.message}")
                     }
-                }
-                override fun onCancelled(error: DatabaseError) {
-                }
-            })
+                })
         }
         mBtnManage.setOnClickListener {
             val intent = Intent(this@MainActivity, manage_home::class.java)

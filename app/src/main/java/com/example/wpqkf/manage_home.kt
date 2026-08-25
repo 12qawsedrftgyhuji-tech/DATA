@@ -144,7 +144,7 @@ class manage_home : AppCompatActivity() {
         enableEdgeToEdge()
         database = Firebase.database.reference// 얘는 onCreate 안에 넣어야!
         setContentView(R.layout.activity_manage_home)/////////////////////////////
-        var account : user.UserAccount? = null
+        var account : UserAccount? = null
         val mtitle : EditText = findViewById(R.id.tv_title)
         val mauthor : TextView = findViewById(R.id.tv_author)
         val webViewContent : WebView = findViewById(R.id.wv_mainText)//이미지 삽입을 위해 웹 뷰로 고침.
@@ -173,7 +173,7 @@ class manage_home : AppCompatActivity() {
                 //정보를 가져오는데 성공하면 자동으로 호출되는 함수
                 override fun onDataChange(snapshot: DataSnapshot) {
                     //가져온 정보를 변수 안에 형식에 맞게 가져오기
-                    account = snapshot.getValue(user.UserAccount::class.java)
+                    account = snapshot.getValue(UserAccount::class.java)
                 }
                 override fun onCancelled(error: DatabaseError) {
                 }
@@ -249,7 +249,7 @@ class manage_home : AppCompatActivity() {
                 //정보를 가져오는데 성공하면 자동으로 호출되는 함수
                 override fun onDataChange(snapshot: DataSnapshot) {
                     //가져온 정보를 변수 안에 형식에 맞게 가져오기
-                    account = snapshot.getValue(user.UserAccount::class.java)
+                    account = snapshot.getValue(UserAccount::class.java)
                     if (account != null && account?.emailId == null) {
                         //이메일을 다시 가져오자
                         account?.emailId = mFirebaseAuth.currentUser?.email

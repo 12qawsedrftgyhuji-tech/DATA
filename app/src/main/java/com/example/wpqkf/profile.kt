@@ -23,6 +23,8 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import kotlinx.coroutines.launch
+import kotlin.jvm.java
+
 
 class profile : AppCompatActivity() {
     //이동버튼들
@@ -64,7 +66,8 @@ class profile : AppCompatActivity() {
 
         //로그인 정보 가져오기
         val firebaseUser = mFirebaseAuth.currentUser
-        //로그인 상태일떄만 정보를 가져오도록 하기
+
+        // 로그인 상태일 때만 정보를 가져오도록 하기
         if (firebaseUser != null) {
             //사용자의 고유 번호로 들어가서 이메일 칸을 찾고 데이터는 한번만 일고 파이어베이스에 정보 요청하기
             mDatabaseRef.child(firebaseUser.uid).addListenerForSingleValueEvent(object :
@@ -72,12 +75,13 @@ class profile : AppCompatActivity() {
                 //정보를 자져오는데 성공하면 자동으로 호출되는 함수
                 override fun onDataChange(snapshot: DataSnapshot) {
                     //가져온 정보를 변수 안에 형식에 맞게 가져오기
-                    val account = snapshot.getValue(user.UserAccount::class.java)
+                    val account = snapshot.getValue(UserAccount::class.java)
                     var emailId = account?.emailId
                     if (emailId == null) {
                         //이메일을 다시 가져오자
                         emailId = mFirebaseAuth.currentUser?.email
                     }
+                    Log.d("DEBUG","$emailId\n ${account?.name}\n${account?.age}\n${account?.number}",)
                     if (account != null) {
                         mTvTitlename.text = account.name?.toString()
                         mTvEmail.text = "이메일: " + emailId.toString()

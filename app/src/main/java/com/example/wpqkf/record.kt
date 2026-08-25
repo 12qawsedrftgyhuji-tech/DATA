@@ -193,14 +193,16 @@ class record : AppCompatActivity() {
      */
     private fun showAppDetailDialog(record: UsageRecord) {
         val pName = record.packageName
+
         val view = LayoutInflater.from(this).inflate(R.layout.dialog_app_detail, null)
 
-        val ivIcon = view.findViewById<ImageView>(R.id.ivDialogAppIcon)
-        val tvName = view.findViewById<TextView>(R.id.tvDialogAppName)
-        val tvUsage = view.findViewById<TextView>(R.id.tvDialogUsageTime)
-        val btnShortcut = view.findViewById<Button>(R.id.btnDialogShortcut)
-        val etMemo = view.findViewById<EditText>(R.id.etDialogMemo)
-        val btnSaveMemo = view.findViewById<Button>(R.id.btnDialogSaveMemo)
+
+        val ivIcon = view.findViewById<ImageView>(R.id.ivDialog앱아이콘)
+        val tvName = view.findViewById<TextView>(R.id.tvDialog앱이름)
+        val tvUsage = view.findViewById<TextView>(R.id.tvDialog사용시간)
+        val btnShortcut = view.findViewById<Button>(R.id.btnDialog바로가기)
+        val etMemo = view.findViewById<EditText>(R.id.etDialog메모)
+        val btnSaveMemo = view.findViewById<Button>(R.id.btnDialogSave메모)
 
         // 맨 위: 아이콘 + 이름
         val icon: Drawable? = try {

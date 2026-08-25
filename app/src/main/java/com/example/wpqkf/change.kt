@@ -19,6 +19,7 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.storage.FirebaseStorage
+import kotlin.jvm.java
 
 private lateinit var mBtnHome6: Button
 private lateinit var mBtnChange: Button
@@ -70,7 +71,7 @@ class change : AppCompatActivity() {
         mDatabaseRef =
             FirebaseDatabase.getInstance().getReference("UserAccount")
         mStorageRef = FirebaseStorage.getInstance()
-        mIvProfile = findViewById(R.id.프로필이미지)
+        mIvProfile = findViewById(R.id.iv_profile_image_ch)
 
         mTvEmail = findViewById(R.id.이메일정보)
         mTvName = findViewById(R.id.이름바꿈)
@@ -110,7 +111,7 @@ class change : AppCompatActivity() {
                 //정보를 가져오는데 성공하면 자동으로 호출되는 함수
                 override fun onDataChange(snapshot: DataSnapshot) {
                     //가져온 정보를 변수 안에 형식에 맞게 가져오기
-                    val account = snapshot.getValue(user.UserAccount::class.java)
+                    val account = snapshot.getValue(UserAccount::class.java)
                     if (account != null) {
                         mTvEmail.text = account.emailId?.toString()
                         mTvName.text = account.name?.toString()

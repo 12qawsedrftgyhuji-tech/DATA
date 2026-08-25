@@ -70,7 +70,7 @@ class register : AppCompatActivity() {
                         val firebaseUser = mFirebaseAuth.currentUser
 
 
-                        val account = user.UserAccount()
+                        val account = UserAccount()
                         account.idToken = firebaseUser?.uid
                         account.emailId = firebaseUser?.email
                         account.password = strPwd
