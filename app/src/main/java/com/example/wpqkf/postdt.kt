@@ -20,6 +20,7 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
+import android.webkit.WebView
 
 class postdt : AppCompatActivity() {
     private lateinit var mBtnSchedule: ImageButton
@@ -41,7 +42,8 @@ class postdt : AppCompatActivity() {
         setContentView(R.layout.activity_postdt)
         val tvTitle = findViewById<TextView>(R.id.tvDtTitle)
         val tvAuthor = findViewById<TextView>(R.id.tvDtAuthor)
-        val tvBody = findViewById<TextView>(R.id.tvDtBody)
+        val wvBody = findViewById<WebView>(R.id.wvDtBody)
+        wvBody.settings.javaScriptEnabled = false
         val tvCategory = findViewById<TextView>(R.id.tvDtCategory)
 
         database = Firebase.database.reference
@@ -55,11 +57,22 @@ class postdt : AppCompatActivity() {
                 val post = snapshot.getValue(Post::class.java)
 
                 if (post != null) {
-                    // 가져온 데이터를 텍스트 뷰에 넣어주기
                     tvTitle.text = post.title
                     tvAuthor.text = post.author
-                    tvBody.text = post.body
                     tvCategory.text = "[${post.category}]"
+
+                    val bodyHtml = post.body ?: ""
+                    val fullHtml = """
+        <html><head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body { margin:0; padding:0; font-family:sans-serif; font-size:16px; line-height:1.6; color:#000000; }
+            img { max-width:100%; height:auto; display:block; margin:6px 0; border-radius:6px; }
+        </style>
+        </head><body>$bodyHtml</body></html>
+    """.trimIndent()
+
+                    wvBody.loadDataWithBaseURL(null, fullHtml, "text/html", "UTF-8", null)
                 }
             }.addOnFailureListener {
                 // 오류가 났을 때:
@@ -115,11 +128,9 @@ class postdt : AppCompatActivity() {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     //가져온 정보를 변수 안에 형식에 맞게 가져오기
                     val account = snapshot.getValue(user.UserAccount::class.java)
-                    if (account?.emailId == null) {
-                        //이메일을 다시 가져오자
-                        account?.emailId = mFirebaseAuth.currentUser?.email
-                    }
-                    val isdeveloper= (account?.emailId=="h_s_posan25_1219@dge.go.kr")
+                    val email = account?.emailId?.toString() ?: mFirebaseAuth.currentUser?.email
+                    
+                    val isdeveloper= (email =="h_s_posan25_1219@dge.go.kr")
                     if (isdeveloper) {
                         btndelete.visibility = View.VISIBLE
                         btnmodify.visibility = View.VISIBLE

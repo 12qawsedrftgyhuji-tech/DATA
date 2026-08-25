@@ -24,6 +24,12 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
+import android.webkit.WebView
+import android.webkit.WebChromeClient
+import com.google.firebase.storage.FirebaseStorage
+import java.util.UUID
+import android.net.Uri
+import androidx.activity.result.contract.ActivityResultContracts
 
 data class Post(
     var uid: String? = "",
@@ -58,6 +64,17 @@ class manage_home : AppCompatActivity() {
     private lateinit var database: DatabaseReference
     private lateinit var mFirebaseAuth: FirebaseAuth
     private lateinit var mDatabaseRef: DatabaseReference
+    private lateinit var webViewContentRef: WebView
+
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            uploadImageUriAndInsert(uri)
+        } else {
+            Toast.makeText(this, "이미지를 선택하지 않았습니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
     fun writeNewpost(userId: String, name: String, title: String, body :String, category: String, authEmail: String) {
         val key = database.child("posts").push().key
         if (key == null) {
@@ -88,6 +105,40 @@ class manage_home : AppCompatActivity() {
             }
         }
     }
+
+    private fun uploadImageUriAndInsert(uri: Uri) {
+        val fileName = "post_images/${UUID.randomUUID()}.jpg"
+        val storageRef = FirebaseStorage.getInstance().reference.child(fileName)
+
+        storageRef.putFile(uri)
+            .continueWithTask { storageRef.downloadUrl }
+            .addOnSuccessListener { downloadUri ->
+                val safeUrl = downloadUri.toString().replace("'", "\\'")
+                webViewContentRef.evaluateJavascript("insertImageAtCursor('$safeUrl')", null)
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "이미지 업로드 실패", Toast.LENGTH_SHORT).show()
+                Log.e("Upload", "실패", e)
+            }
+    }
+
+    private fun unescapeJsString(raw: String): String {
+        var s = raw.trim('"')
+
+        // \u003C, \u003E, \u0026 같은 유니코드 이스케이프를 실제 문자로 변환
+        val unicodeRegex = Regex("\\\\u([0-9a-fA-F]{4})")
+        s = unicodeRegex.replace(s) { matchResult ->
+            matchResult.groupValues[1].toInt(16).toChar().toString()
+        }
+
+        // 나머지 이스케이프 처리 (순서 중요: \\ 는 마지막에)
+        s = s.replace("\\\"", "\"")
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\\\", "\\")
+
+        return s
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -96,10 +147,22 @@ class manage_home : AppCompatActivity() {
         var account : user.UserAccount? = null
         val mtitle : EditText = findViewById(R.id.tv_title)
         val mauthor : TextView = findViewById(R.id.tv_author)
-        val mmaintext : EditText = findViewById(R.id.tv_mainText)
+        val webViewContent : WebView = findViewById(R.id.wv_mainText)//이미지 삽입을 위해 웹 뷰로 고침.
         val postBtn : Button = findViewById(R.id.btn_post)
         val CancelBtn : Button = findViewById(R.id.btn_cancel)
         val spinnerCt : Spinner = findViewById(R.id.spinner_category)
+        val btnPickImage : Button = findViewById(R.id.btn_pick_image)
+        btnPickImage.setOnClickListener {
+            pickImageLauncher.launch(
+                androidx.activity.result.PickVisualMediaRequest(
+                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                )
+            )
+        }
+        webViewContent.settings.javaScriptEnabled = true
+        webViewContent.webChromeClient = WebChromeClient()
+        webViewContent.loadUrl("file:///android_asset/editor.html")
+        webViewContentRef = webViewContent
         mFirebaseAuth = FirebaseAuth.getInstance()
         mDatabaseRef =
             FirebaseDatabase.getInstance().getReference("UserAccount")
@@ -117,12 +180,41 @@ class manage_home : AppCompatActivity() {
             })
         }
         mauthor.setText("관리자")
-        val categories = arrayListOf("키오스크", "예매 방법","모바일 앱 결제", "PC앱 결제", "직접 입력")
+        val categories = arrayListOf<String>()
 
         // 어댑터 연결 (목록과 디자인을 연결)
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, categories)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerCt.adapter = adapter
+
+        database.child("categories").addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val tempSelected = spinnerCt.selectedItem?.toString() ?: ""
+                categories.clear()
+
+                for (catSnapshot in snapshot.children) {
+                    val cat = catSnapshot.getValue(String::class.java)
+                    if (cat != null) categories.add(cat)
+                }
+
+                // 데이터가 아예 없으면 기본값 세팅 (처음 한 번만 실행됨)
+                if (categories.isEmpty()) {
+                    val defaults = listOf("키오스크", "예매 방법", "모바일 앱 결제", "PC앱 결제")
+                    defaults.forEach { database.child("categories").push().setValue(it) }
+                }
+
+                // 마지막에 항상 "직접 입력" 추가
+                if (!categories.contains("직접 입력")) categories.add("직접 입력")
+
+                adapter.notifyDataSetChanged()
+
+                // 선택 상태 유지 로직
+                if (tempSelected.isNotEmpty() && categories.contains(tempSelected)) {
+                    spinnerCt.setSelection(categories.indexOf(tempSelected))
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
 
         var selectedCategory = ""
         spinnerCt.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -134,10 +226,9 @@ class manage_home : AppCompatActivity() {
                     builder.setView(input)
                     builder.setPositiveButton("추가") { _, _ ->
                         val newCat = input.text.toString().trim()
-                        if (newCat.isNotEmpty()) {
-                            categories.add(categories.size - 1, newCat)
-                            adapter.notifyDataSetChanged()
-                            spinnerCt.setSelection(categories.indexOf(newCat)) // 새로 만든 것 바로 선택
+                        if (newCat.isNotEmpty() && !categories.contains(newCat)) {
+                            database.child("categories").push().setValue(newCat)
+                            spinnerCt.setSelection(categories.indexOf(newCat))
                             selectedCategory = newCat
                         }
                     }
@@ -159,7 +250,7 @@ class manage_home : AppCompatActivity() {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     //가져온 정보를 변수 안에 형식에 맞게 가져오기
                     account = snapshot.getValue(user.UserAccount::class.java)
-                    if (account?.emailId == null) {
+                    if (account != null && account?.emailId == null) {
                         //이메일을 다시 가져오자
                         account?.emailId = mFirebaseAuth.currentUser?.email
                     }
@@ -171,14 +262,25 @@ class manage_home : AppCompatActivity() {
         postBtn.setOnClickListener {
             val titletext = mtitle.text.toString().trim()
             val authortext = mauthor.text.toString().trim()
-            val bodytext = mmaintext.text.toString().trim()
-            if (titletext.isNotEmpty() && authortext.isNotEmpty() &&bodytext.isNotEmpty() &&(firebaseUser!=null)){
-                writeNewpost(userId= firebaseUser.uid, name= authortext, title= titletext, body=bodytext, category =  selectedCategory, authEmail = account?.emailId?:"")
-                val intent = Intent(this@manage_home, MainActivity::class.java)
-                startActivity(intent)
-                finish()
-            } else if (titletext.isEmpty() || authortext.isEmpty() || bodytext.isEmpty()){
-                Toast.makeText(this,"전체 칸을 모두 채워주세요", Toast.LENGTH_SHORT).show()
+
+            webViewContent.evaluateJavascript("getEditorContent()") { rawHtml ->
+                val bodytext = unescapeJsString(rawHtml).trim()
+
+                if (titletext.isNotEmpty() && authortext.isNotEmpty() && bodytext.isNotEmpty() && (firebaseUser != null)) {
+                    writeNewpost(
+                        userId = firebaseUser.uid,
+                        name = authortext,
+                        title = titletext,
+                        body = bodytext,
+                        category = selectedCategory,
+                        authEmail = account?.emailId?.toString() ?: ""
+                    )
+                    val intent = Intent(this@manage_home, MainActivity::class.java)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    Toast.makeText(this, "전체 칸을 모두 채워주세요", Toast.LENGTH_SHORT).show()
+                }
             }
         }
         CancelBtn.setOnClickListener {

@@ -7,67 +7,112 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/manage"
+        android:layout_width="80dp"  android:layout_height="40dp" android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+
+        android:background="@drawable/rectangle_1"
+        android:text="POST"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Spinner
+        android:id="@+id/spinner_filter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="5dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/manage" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewPosts"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:padding="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/toolbar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/spinner_filter" />
+
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
         android:background="@drawable/toolbar_border"
-        android:minHeight="?attr/actionBarSize"
-        android:theme="?attr/actionBarTheme"
+        app:contentInsetEnd="0dp"
+        app:contentInsetLeft="0dp"
+        app:contentInsetStart="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent">
 
-    <Button
-        android:id="@+id/scheduleho"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_marginBottom="2dp"
-        android:text="일정"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/recordho"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_marginStart="27dp"
-        android:layout_marginBottom="2dp"
-        android:text="기록"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/scheduleho" />
+            <ImageButton
+                android:id="@+id/schedule"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="일정"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_schedule" />
 
-    <Button
-        android:id="@+id/homeho"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_marginStart="27dp"
-        android:layout_marginBottom="2dp"
-        android:text="홈"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/recordho" />
+            <ImageButton
+                android:id="@+id/record"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="기록"
+                android:padding="15dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_record" />
 
-    <Button
-        android:id="@+id/aiho"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_marginStart="27dp"
-        android:layout_marginBottom="2dp"
-        android:text="AI"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/homeho" />
+            <ImageButton
+                android:id="@+id/home"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="홈"
+                android:padding="16dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_home" />
 
-    <Button
-        android:id="@+id/profileho"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_marginStart="27dp"
-        android:layout_marginBottom="2dp"
-        android:text="프필"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/aiho" />
+            <ImageButton
+                android:id="@+id/ai"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="AI"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_ai" />
+
+            <ImageButton
+                android:id="@+id/profile"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="프로필"
+                android:padding="16dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_profile" />
+        </LinearLayout>
+    </androidx.appcompat.widget.Toolbar>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

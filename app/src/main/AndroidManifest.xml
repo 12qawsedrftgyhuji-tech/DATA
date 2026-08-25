@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -21,7 +22,10 @@
             android:name=".ai"
             android:exported="false" />
         <activity
-            android:name=".home"
+            android:name=".manage_home"
+            android:exported="false" />
+        <activity
+            android:name=".postdt"
             android:exported="false" />
         <activity
             android:name=".record"
@@ -37,6 +41,9 @@
             android:exported="false" />
         <activity
             android:name=".register"
+            android:exported="false" />
+        <activity
+            android:name=".ModifyText"
             android:exported="false" />
         <activity
             android:name=".login"

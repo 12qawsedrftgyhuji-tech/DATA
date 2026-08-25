@@ -46,9 +46,9 @@ class register : AppCompatActivity() {
         mDatabaseRef = FirebaseDatabase.getInstance().reference
 
 
-        mEtEmail = findViewById(R.id.이메일입력)
-        mEtPwd = findViewById(R.id.비번입력레지)
-        mEtName = findViewById(R.id.이름입력)
+        mEtEmail = findViewById(R.id.tv_title)
+        mEtPwd = findViewById(R.id.tv_author)
+        mEtName = findViewById(R.id.tv_mainText)
         mEtAge = findViewById(R.id.나이입력)
         mEtNumber = findViewById(R.id.전번입력)
         mBtnRegister = findViewById(R.id.가입버튼)
