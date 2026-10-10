@@ -14,13 +14,13 @@
         android:layout_marginBottom="20dp">
 
         <ImageView
-            android:id="@+id/ivDialog앱아이콘"
+            android:id="@+id/ivDialogAppIcon"
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:contentDescription="앱 아이콘" />
 
         <TextView
-            android:id="@+id/tvDialog앱이름"
+            android:id="@+id/tvDialogAppName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -31,7 +31,7 @@
 
     <!-- 1칸: 사용 시간 -->
     <TextView
-        android:id="@+id/tvDialog사용시간"
+        android:id="@+id/tvDialogUsageTime"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="15sp"
@@ -39,7 +39,7 @@
 
     <!-- 2칸: 바로가기 버튼 -->
     <Button
-        android:id="@+id/btnDialog바로가기"
+        android:id="@+id/btnDialogShortcut"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="바로가기"
@@ -54,7 +54,7 @@
         android:layout_marginBottom="4dp" />
 
     <EditText
-        android:id="@+id/etDialog메모"
+        android:id="@+id/etDialogMemo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minLines="3"
@@ -63,7 +63,7 @@
         android:background="@android:drawable/edit_text" />
 
     <Button
-        android:id="@+id/btnDialogSave메모"
+        android:id="@+id/btnDialogSaveMemo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"

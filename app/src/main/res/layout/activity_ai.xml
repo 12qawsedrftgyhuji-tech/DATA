@@ -81,4 +81,30 @@
                 android:src="@drawable/ic_profile" />
         </LinearLayout>
     </androidx.appcompat.widget.Toolbar>
+
+    <Button
+        android:id="@+id/BtnTR"
+        android:layout_width="196dp"
+        android:layout_height="135dp"
+        android:text="카메라를 이용하여 키오스크 인식"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@+id/toolbar4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.287" />
+
+    <Button
+        android:id="@+id/btnTa"
+        android:layout_width="196dp"
+        android:layout_height="135dp"
+        android:text="디지털 기기에 대해 대화나누기"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@+id/toolbar4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.635" />
 </androidx.constraintlayout.widget.ConstraintLayout>

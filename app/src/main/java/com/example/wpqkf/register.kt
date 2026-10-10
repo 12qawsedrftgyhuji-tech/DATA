@@ -49,10 +49,10 @@ class register : AppCompatActivity() {
         mEtEmail = findViewById(R.id.tv_title)
         mEtPwd = findViewById(R.id.tv_author)
         mEtName = findViewById(R.id.tv_mainText)
-        mEtAge = findViewById(R.id.나이입력)
-        mEtNumber = findViewById(R.id.전번입력)
-        mBtnRegister = findViewById(R.id.가입버튼)
-        mBtnReturn = findViewById(R.id.돌아가기)
+        mEtAge = findViewById(R.id.et_age_input)
+        mEtNumber = findViewById(R.id.et_phone_input)
+        mBtnRegister = findViewById(R.id.btn_register)
+        mBtnReturn = findViewById(R.id.btn_back)
 
 
         // 회원가입 처리 시작

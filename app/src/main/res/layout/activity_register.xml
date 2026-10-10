@@ -33,22 +33,22 @@
         app:layout_constraintTop_toBottomOf="@+id/tv_title" />
 
     <Button
-        android:id="@+id/가입버튼"
+        android:id="@+id/btn_register"
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:text="회원가입"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/돌아가기"
+        app:layout_constraintEnd_toStartOf="@+id/btn_back"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
-        android:id="@+id/돌아가기"
+        android:id="@+id/btn_back"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="돌아가기"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/가입버튼" />
+        app:layout_constraintStart_toEndOf="@+id/btn_register" />
 
     <EditText
         android:id="@+id/tv_mainText"
@@ -63,7 +63,7 @@
         app:layout_constraintTop_toBottomOf="@+id/tv_author" />
 
     <EditText
-        android:id="@+id/나이입력"
+        android:id="@+id/et_age_input"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="60dp"
@@ -75,7 +75,7 @@
         app:layout_constraintTop_toBottomOf="@+id/tv_mainText" />
 
     <EditText
-        android:id="@+id/전번입력"
+        android:id="@+id/et_phone_input"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="60dp"
@@ -84,5 +84,5 @@
         android:inputType="number"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/나이입력" />
+        app:layout_constraintTop_toBottomOf="@+id/et_age_input" />
 </androidx.constraintlayout.widget.ConstraintLayout>

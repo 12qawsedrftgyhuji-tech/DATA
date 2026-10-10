@@ -215,11 +215,11 @@ class login : AppCompatActivity() {
         mFirebaseAuth = FirebaseAuth.getInstance()
         mDatabaseRef = FirebaseDatabase.getInstance().getReference()
 
-        mEtEmail = findViewById(R.id.아이디입력)
-        mEtPwd = findViewById(R.id.비번입력로그)
-        mBtnRegister = findViewById(R.id.회원가입버튼)
-        mBtnLogin = findViewById(R.id.로그인버튼)
-        mBtnGoogle = findViewById(R.id.구글로그인버튼)
+        mEtEmail = findViewById(R.id.et_id_input)
+        mEtPwd = findViewById(R.id.et_password_input)
+        mBtnRegister = findViewById(R.id.btn_register)
+        mBtnLogin = findViewById(R.id.btn_login)
+        mBtnGoogle = findViewById(R.id.btn_google_login)
 
 
 

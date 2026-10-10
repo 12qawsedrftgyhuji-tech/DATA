@@ -73,11 +73,11 @@ class change : AppCompatActivity() {
         mStorageRef = FirebaseStorage.getInstance()
         mIvProfile = findViewById(R.id.iv_profile_image_ch)
 
-        mTvEmail = findViewById(R.id.이메일정보)
-        mTvName = findViewById(R.id.이름바꿈)
-        mTvAge = findViewById(R.id.나이바꿈)
-        mTvNumber = findViewById(R.id.전번바꿈)
-        mBtnImage =findViewById(R.id.사진바꿈)
+        mTvEmail = findViewById(R.id.tv_email_info)
+        mTvName = findViewById(R.id.et_change_name)
+        mTvAge = findViewById(R.id.et_change_age)
+        mTvNumber = findViewById(R.id.et_change_phone)
+        mBtnImage = findViewById(R.id.btn_change_photo)
 
         imageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
@@ -128,11 +128,11 @@ class change : AppCompatActivity() {
                 }
             })
         }
-        mBtnHome6 = findViewById(R.id.돌아가기)
-        mBtnChange = findViewById(R.id.정보바꿈버튼)
-        mEtName = findViewById(R.id.이름바꿈)
-        mEtAge = findViewById(R.id.나이바꿈)
-        mEtNumber = findViewById(R.id.전번바꿈)
+        mBtnHome6 = findViewById(R.id.btn_back)
+        mBtnChange = findViewById(R.id.btn_change_info)
+        mEtName = findViewById(R.id.et_change_name)
+        mEtAge = findViewById(R.id.et_change_age)
+        mEtNumber = findViewById(R.id.et_change_phone)
 
         mBtnHome6.setOnClickListener {
             val intent = Intent(this@change, MainActivity::class.java)
