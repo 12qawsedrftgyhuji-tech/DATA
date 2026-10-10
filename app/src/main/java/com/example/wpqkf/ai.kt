@@ -38,15 +38,17 @@ class ai : AppCompatActivity() {
         }
     }
 
-    fun checkUserAndShowDialog(AreuOk : Boolean) {
+    fun checkUserAndShowDialog(AreuOk: Boolean) {
         if (!AreuOk) {
-            MaterialAlertDialogBuilder(this) // Activity 내인 경우 this 사용
+            MaterialAlertDialogBuilder(this)
                 .setTitle("알림")
                 .setMessage("Gemini AI 기능은 구글 계정으로 로그인한 경우에만 사용할 수 있습니다.")
                 .setPositiveButton("확인") { dialog, _ ->
-                    dialog.dismiss() // 확인 누르면 닫기
+                    dialog.dismiss()
+                    startActivity(Intent(this@ai, MainActivity::class.java))
+                    finish()
                 }
-                .setCancelable(true) // 창 바깥 터치 시 닫기 허용
+                .setCancelable(false)
                 .show()
         }
     }

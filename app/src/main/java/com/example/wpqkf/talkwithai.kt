@@ -104,8 +104,12 @@ class talkwithai : AppCompatActivity(), TextToSpeech.OnInitListener {
             MaterialAlertDialogBuilder(this)
                 .setTitle("알림")
                 .setMessage("Gemini AI 기능은 구글 계정으로 로그인한 경우에만 사용할 수 있습니다.")
-                .setPositiveButton("확인") { dialog, _ -> dialog.dismiss() }
-                .setCancelable(true)
+                .setPositiveButton("확인") { dialog, _ ->
+                    dialog.dismiss()
+                    startActivity(Intent(this@talkwithai, MainActivity::class.java))
+                    finish()
+                }
+                .setCancelable(false)
                 .show()
         }
     }
