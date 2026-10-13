@@ -45,6 +45,7 @@ class talkwithai : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var mFirebaseAuth: FirebaseAuth
     private lateinit var mDatabaseRef: DatabaseReference
     private var ttsReady = false
+    private val chatRepo = ChatRepository()
     private var username = "사용자"
 
     private fun buildSystemPrompt(): String {
@@ -55,7 +56,7 @@ class talkwithai : AppCompatActivity(), TextToSpeech.OnInitListener {
         return """
         당신은 스마트폰, 컴퓨터, 키오스크, 인터넷 사용이 어려운 어르신과 디지털 소외 계층을 돕는 친절한 '디지털 도우미'입니다.
         반드시 다음 규칙을 지키세요.
-        1. 항상 존댓말로, 손주가 할머니·할아버지께 설명하듯 따뜻하고 차분하게 말합니다.
+        1. 항상 존댓말로, 따뜻하고 차분하게 말합니다.
         2. 어려운 용어(앱, 설정, 다운로드, 와이파이 등)는 쉬운 우리말로 풀어서 설명하고, 꼭 필요한 용어는 뜻을 함께 알려줍니다.
         3. 방법은 "첫째, 둘째, 셋째"처럼 한 단계씩 짧게 나누어 설명하고, 각 단계에서 화면의 어느 부분을 누르는지 구체적으로 알려줍니다.
         4. 한 번에 너무 많은 내용을 말하지 말고, 답변은 최대 6~8문장 이내로 합니다. 마지막에는 "여기까지 따라 하셨나요? 잘 안 되면 말씀해 주세요."처럼 확인합니다.
@@ -221,25 +222,47 @@ class talkwithai : AppCompatActivity(), TextToSpeech.OnInitListener {
         addMessage(text, isUser = true)
         setLoading(true)
 
+        // 전송 전에 오늘 사용량 확인
+        chatRepo.getTodayUsage { used ->
+            when {
+                used == null -> {
+                    addMessage("사용량을 확인하지 못했어요. 인터넷 연결을 확인해 주세요.", isUser = false)
+                    setLoading(false)
+                }
+                used >= DAILY_TOKEN_LIMIT -> {
+                    addMessage(
+                        "오늘 사용할 수 있는 AI 사용량을 모두 사용하셨어요. 내일 다시 이용해 주세요.",
+                        isUser = false,
+                        readAloud = true
+                    )
+                    setLoading(false)
+                }
+                else -> askGemini(text)
+            }
+        }
+    }
+
+    private fun askGemini(text: String) {
         lifecycleScope.launch {
             try {
                 val response = chat.sendMessage(text)
+                chatRepo.addUsage(response.usageMetadata?.totalTokenCount ?: 0) // 사용량 누적
                 val answer = cleanText(response.text.orEmpty())
                     .ifBlank { "죄송해요, 잘 이해하지 못했어요. 다시 한 번 말씀해 주시겠어요?" }
                 addMessage(answer, isUser = false, readAloud = true)
-            }  catch (e: Exception) {
-            android.util.Log.e("GeminiError", "호출 실패", e)
-            addMessage(
-                "오류: ${e.javaClass.simpleName}\n${e.message}",
-                isUser = false,
-                readAloud = false
+            } catch (e: Exception) {
+                Log.e("GeminiError", "호출 실패", e)
+                addMessage(
+                    "오류: ${e.javaClass.simpleName}\n${e.message}",
+                    isUser = false,
+                    readAloud = false
                 )
-            }
-             finally {
+            } finally {
                 setLoading(false)
             }
         }
     }
+
 
     private fun addMessage(text: String, isUser: Boolean, readAloud: Boolean = false) {
         messages.add(ChatMessage(nextId++, text, isUser))

@@ -35,20 +35,31 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     buildFeatures {
         viewBinding = true
         buildConfig = true
     }
 }
-val cameraxVersion = "1.3.4"
+val camerax_version = "1.3.4"
 dependencies {
-    implementation("androidx.camera:camera-core:${cameraxVersion}")
-    implementation("androidx.camera:camera-camera2:${cameraxVersion}")
-    implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
-    implementation("androidx.camera:camera-view:${cameraxVersion}")
+    //이미지 라벨링 관련 dependencies 설정
+    implementation("com.google.mlkit:image-labeling-custom:17.0.3")
+
+    //okHTTP 의존성
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    //CameraX 관련 dependencies 설정
+    implementation ("androidx.camera:camera-core:${camerax_version}")
+    implementation ("androidx.camera:camera-camera2:${camerax_version}")
+    implementation ("androidx.camera:camera-lifecycle:${camerax_version}")
+    implementation ("androidx.camera:camera-video:${camerax_version}")
+
+    implementation ("androidx.camera:camera-view:${camerax_version}")
+    implementation ("androidx.camera:camera-extensions:${camerax_version}")
+
     // Firebase BoM (Firebase 라이브러리들의 버전을 통일하여 관리)
     implementation("com.google.mlkit:text-recognition-korean:16.0.1")//구글 플레이: implementation("com.google.android.gms:play-services-mlkit-text-recognition-korean:16.0.1")
     implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
@@ -61,7 +72,7 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
     implementation("com.google.firebase:firebase-appcheck")
     implementation("com.google.firebase:firebase-appcheck-debug")
-    implementation("com.google.firebase:firebase-vertexai:16.0.0-beta02")
+    implementation("com.google.firebase:firebase-firestore")
 
     // Room 데이터베이스
     implementation("androidx.room:room-runtime:2.8.4")
