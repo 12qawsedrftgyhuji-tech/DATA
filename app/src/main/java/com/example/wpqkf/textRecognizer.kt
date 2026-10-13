@@ -465,9 +465,10 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.KOREAN.toLanguageTag())
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ko-KR")
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 8000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L)
         }
         lastPartialText = ""
         isListening = true
@@ -506,11 +507,11 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private val recognitionListener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) {}
-        override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {}
+        override fun onReadyForSpeech(params: Bundle?) { Log.d("STT", "듣기 준비 완료") }
+        override fun onBeginningOfSpeech() { Log.d("STT", "말 시작 감지") }
+        override fun onRmsChanged(rmsdB: Float) { Log.d("STT", "rms=$rmsdB") }
         override fun onBufferReceived(buffer: ByteArray?) {}
-        override fun onEndOfSpeech() {}
+        override fun onEndOfSpeech() { Log.d("STT", "말 끝 감지") }
         override fun onEvent(eventType: Int, params: Bundle?) {}
 
         override fun onPartialResults(partialResults: Bundle?) {
@@ -528,6 +529,8 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
                 ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 ?.firstOrNull()
                 ?: lastPartialText
+            speechRecognizer?.destroy()
+            speechRecognizer = null
             resetMicUi()
             if (text.isBlank()) {
                 Toast.makeText(this@textRecognizer, "음성이 인식되지 않았어요. 다시 말씀해 주세요", Toast.LENGTH_SHORT).show()
@@ -538,9 +541,12 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         override fun onError(error: Int) {
+            speechRecognizer?.cancel()
+            speechRecognizer?.destroy()
+            speechRecognizer = null   // 다음 startListening()에서 새로 생성됨
+
             val partial = lastPartialText
             resetMicUi()
-            // 인식은 끝났지만 중간 결과가 있으면 그것을 사용
             if (partial.isNotBlank() &&
                 (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
             ) {

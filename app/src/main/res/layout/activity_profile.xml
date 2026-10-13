@@ -130,7 +130,7 @@
         android:background="#FFFFFF"
         android:text="로그아웃하기"
         android:textColor="#FF1101"
-        android:textSize="16sp"
+        android:textSize="22sp"
         android:textStyle="bold"
         app:backgroundTint="@null"
         app:layout_constraintBottom_toTopOf="@+id/toolbar4"
