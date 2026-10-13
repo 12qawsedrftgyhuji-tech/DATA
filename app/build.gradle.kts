@@ -35,20 +35,25 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     buildFeatures {
         viewBinding = true
         buildConfig = true
     }
 }
-val cameraxVersion = "1.3.4"
+val camerax_version = "1.1.0-beta01"
 dependencies {
-    implementation("androidx.camera:camera-core:${cameraxVersion}")
-    implementation("androidx.camera:camera-camera2:${cameraxVersion}")
-    implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
-    implementation("androidx.camera:camera-view:${cameraxVersion}")
+    //CameraX 관련 dependencies 설정
+    implementation ("androidx.camera:camera-core:${camerax_version}")
+    implementation ("androidx.camera:camera-camera2:${camerax_version}")
+    implementation ("androidx.camera:camera-lifecycle:${camerax_version}")
+    implementation ("androidx.camera:camera-video:${camerax_version}")
+
+    implementation ("androidx.camera:camera-view:${camerax_version}")
+    implementation ("androidx.camera:camera-extensions:${camerax_version}")
+
     // Firebase BoM (Firebase 라이브러리들의 버전을 통일하여 관리)
     implementation("com.google.mlkit:text-recognition-korean:16.0.1")//구글 플레이: implementation("com.google.android.gms:play-services-mlkit-text-recognition-korean:16.0.1")
     implementation(platform("com.google.firebase:firebase-bom:34.13.0"))

@@ -1,6 +1,7 @@
 package com.example.wpqkf
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
@@ -8,9 +9,14 @@ import android.widget.Button
 import android.widget.ImageButton
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -26,33 +32,35 @@ import com.google.firebase.appcheck.appCheck
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import android.Manifest
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 
-class YourImageAnalyzer : ImageAnalysis.Analyzer {
+class TextAnalyzer : ImageAnalysis.Analyzer {
 
     // 한국어 텍스트 인식기 객체 생성
     private val recognizer = TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
 
     @ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-            // ML Kit으로 이미지 분석 실행
-            recognizer.process(image)
-                .addOnSuccessListener { visionText ->
-                    // 텍스트 인식 성공 시 처리 (visionText.text)
-                }
-                .addOnFailureListener { e ->
-                    // 에러 처리
-                }
-                .addOnCompleteListener {
-                    // 분석이 끝나면 반드시 imageProxy를 닫아주어야 다음 프레임이 전달됩니다.
-                    imageProxy.close()
-                }
-        } else {
+        val mediaImage = imageProxy.image ?: run{
             imageProxy.close()
+            return
         }
+        val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+        recognizer.process(inputImage)
+            .addOnSuccessListener { visionText ->
+                Log.d("TextAnalyzer","OCR 성공:${visionText}")
+            }
+            .addOnFailureListener { e ->
+                Log.e("TextAnalyzer","OCR 실패 :",e)
+            }
+            .addOnCompleteListener {
+                // 분석이 끝나면 imageProxy를 닫아주어야 다음 프레임이 전달됨
+                imageProxy.close()
+            }
     }
 }
 class textRecognizer : AppCompatActivity() {
@@ -62,6 +70,16 @@ class textRecognizer : AppCompatActivity() {
     private lateinit var mBtnAi4: ImageButton
     private lateinit var mBtnProfile4: ImageButton
     val recognizer = TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
+
+    //cameraX - MLkit 작업용
+    private lateinit var previewView: PreviewView
+    private lateinit var cameraExecutor: ExecutorService
+
+    private val permissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) startCamera()
+            else Toast.makeText(this, "카메라 권한이 필요합니다", Toast.LENGTH_SHORT).show()
+        }
 
     fun isGoogleUser() :Boolean {
         val user = FirebaseAuth.getInstance().currentUser ?: return false
@@ -84,6 +102,36 @@ class textRecognizer : AppCompatActivity() {
         }
     }
 
+    //cameraX - MLkit 작업
+    private fun startCamera() {
+        val providerFuture = ProcessCameraProvider.getInstance(this)
+        providerFuture.addListener({
+            val cameraProvider = providerFuture.get()
+
+            val preview = Preview.Builder().build().also {
+                it.setSurfaceProvider(previewView.surfaceProvider)
+            }
+
+            val imageAnalysis = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+                .also { it.setAnalyzer(cameraExecutor, TextAnalyzer()) }
+
+            cameraProvider.unbindAll()
+            cameraProvider.bindToLifecycle(
+                this,
+                CameraSelector.DEFAULT_BACK_CAMERA,
+                preview,
+                imageAnalysis
+            )
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraExecutor.shutdown()
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,7 +142,19 @@ class textRecognizer : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        //메인 코드 작성하는 공간
+        //CameraX - MLkit 작업
+        previewView = findViewById(R.id.previewView) // preview 화면을 의미한다.
+        cameraExecutor = Executors.newSingleThreadExecutor() // 싱글쓰레드에서 카메라가 작업할 수 있도록 도와줄 변수다.
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            startCamera()
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+
+
 
         checkUserAndShowDialog(isGoogleUser())//구글 계정일 때만 ai 기능-> gemini 쓸 수 있게끔 ㄱㄱ
         mBtnSchedule4 = findViewById(R.id.schedule)
