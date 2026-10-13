@@ -89,8 +89,6 @@ class postdt : AppCompatActivity() {
         mBtnHome = findViewById(R.id.home)
         mBtnAi = findViewById(R.id.ai)
         mBtnProfile = findViewById(R.id.profile)
-        btnPrev = findViewById(R.id.btnleft)
-        btnNext = findViewById(R.id.btnright)
         btndelete = findViewById(R.id.btndelete)
         btnmodify = findViewById(R.id.btnmodify)
 
