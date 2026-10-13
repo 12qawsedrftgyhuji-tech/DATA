@@ -41,6 +41,11 @@ import com.google.ai.client.generativeai.type.content
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -233,8 +238,8 @@ class GeminiClient {
         systemInstruction = content {
             text(
                 """
-                당신은 키오스크 사용이 어려운 사용자를 돕는 친절한 도우미입니다.
-                사용자의 이름은 ${username}입니다.
+                당신은 디지털 기기(ex:키오스크) 사용이 어려운 사용자를 돕는 친절한 도우미입니다.
+                사용자의 이름은 ${username}입니다. 사용자의 나이는
                 사용자가 질문할 때마다 카메라로 촬영한 키오스크 화면의 OCR 텍스트가 함께 전달됩니다.
                 OCR 오타가 있을 수 있으니 문맥으로 보정하세요.
                 현재 화면을 기준으로, 디지털 소외 계층 분들도 이해할 수 있게 쉬운 말로 단계별로 짧게 답하세요.
@@ -288,6 +293,8 @@ class GeminiClient {
 }
 
 class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
+    private lateinit var mFirebaseAuth: FirebaseAuth
+    private lateinit var mDatabaseRef: DatabaseReference
     private lateinit var mBtnSchedule4: ImageButton
     private lateinit var mBtnRecord4: ImageButton
     private lateinit var mBtnHome4: ImageButton
@@ -318,6 +325,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var lastPartialText = ""
     private var googleUser = false
 
+    private var userage = 80
     // 대화 기록
     private val chatRepo = ChatRepository()
     private val chatLog = StringBuilder()
@@ -459,7 +467,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.KOREAN.toLanguageTag())
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 5000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 8000L)
         }
         lastPartialText = ""
         isListening = true
@@ -477,13 +485,11 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
         uiHandler.removeCallbacks(micIdleRunnable)
         micRed = false
         btnMic.setBackgroundResource(R.drawable.bg_mic_on)
-        btnMic.setColorFilter(Color.WHITE)
     }
 
     private fun setMicOff() {
         micRed = true
         btnMic.setBackgroundResource(R.drawable.bg_mic_off)
-        btnMic.setColorFilter(Color.WHITE)
         uiHandler.removeCallbacks(micIdleRunnable)
         uiHandler.postDelayed(micIdleRunnable, 2000)
     }
@@ -557,7 +563,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun loadHistory() {
         chatRepo.loadRecent(20) { turns ->
             geminiClient.setHistory(turns)
-            turns.forEach { chatLog.append(" ${it.question}\n ${it.answer}\n\n") }
+            turns.forEach { chatLog.append("질문: ${it.question}\n답변: ${it.answer}\n\n") }
             renderLog()
         }
     }
@@ -614,7 +620,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
                     runOnUiThread {
                         val a = answer.ifBlank { "답변을 받지 못했어요." }
                         val percent = ((used + tokens) * 100 / DAILY_TOKEN_LIMIT).coerceAtMost(100)
-                        chatLog.append(" $q\n $a\n 오늘 사용량 $percent%\n\n")
+                        chatLog.append("질문:$q\n답변:$a\n 오늘 사용량 $percent%\n\n")
                         renderLog()
                         if (switchAutoRead.isChecked) speak(a) // 읽어주기 ON이면 답변 낭독
                         chatRepo.save(q, a, ocr)
@@ -625,7 +631,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
                 onError = { e ->
                     Log.e("Gemini", "요청 실패", e)
                     runOnUiThread {
-                        renderLog(" $q\n⚠ 오류가 발생했어요. 잠시 후 다시 시도해 주세요.")
+                        renderLog(" $q\n오류가 발생했어요. 잠시 후 다시 시도해 주세요.")
                         isSending = false
                     }
                 }
@@ -667,6 +673,29 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
                 maxOf(systemBars.bottom, ime.bottom)
             )
             insets
+        }
+        //userage 가져오기
+        mFirebaseAuth = FirebaseAuth.getInstance()
+        mDatabaseRef =
+            FirebaseDatabase.getInstance().getReference("UserAccount")
+        val firebaseUser = mFirebaseAuth.currentUser
+        if (firebaseUser != null) {
+            //사용자의 고유 번호로 들어가서 이메일 칸을 찾고 데이터는 한번만 일고 파이어베이스에 정보 요청하기
+            mDatabaseRef.child(firebaseUser.uid).addListenerForSingleValueEvent(object :
+                ValueEventListener {
+                //정보를 자져오는데 성공하면 자동으로 호출되는 함수
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    //가져온 정보를 변수 안에 형식에 맞게 가져오기
+                    val account = snapshot.getValue(UserAccount::class.java)
+                    if (account != null) {
+                        userage = account.age?.toString()?.toIntOrNull() ?: 0
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Toast.makeText(this@textRecognizer, "사용자 정보를 가져오지 못했습니다.", Toast.LENGTH_SHORT).show()
+                }
+            })
         }
         //username 가져오기.
         username = FirebaseAuth.getInstance().currentUser?.displayName.orEmpty()
