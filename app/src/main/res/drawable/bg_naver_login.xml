@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle"> <!-- 네이버 공식 초록색 -->
+    <solid android:color="#03C75A" /> <!-- 둥근 모서리 (8dp) -->
+    <corners android:radius="8dp" />
+</shape>

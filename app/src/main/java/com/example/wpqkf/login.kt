@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import android.provider.Settings
+import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -34,6 +35,16 @@ import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.launch
 import java.security.SecureRandom
 import androidx.activity.result.contract.ActivityResultContracts
+import com.kakao.sdk.auth.model.OAuthToken
+import com.kakao.sdk.common.model.ClientErrorCause
+import com.kakao.sdk.user.UserApiClient
+import com.kakao.sdk.common.util.Utility
+import com.kakao.sdk.common.model.ClientError
+import com.navercorp.nid.NaverIdLoginSDK
+import com.navercorp.nid.oauth.OAuthLoginCallback
+import com.navercorp.nid.oauth.NidOAuthLogin
+import com.navercorp.nid.profile.NidProfileCallback
+import com.navercorp.nid.profile.data.NidProfileResponse
 
 class login : AppCompatActivity() {
     private lateinit var mFirebaseAuth: FirebaseAuth
@@ -221,10 +232,28 @@ class login : AppCompatActivity() {
         mBtnLogin = findViewById(R.id.btn_login)
         mBtnGoogle = findViewById(R.id.btn_google_login)
 
-
-
         mBtnGoogle.setOnClickListener {
             startLogin()
+        }
+
+        var keyHash = Utility.getKeyHash(this)
+        Log.d("KeyHash", keyHash)
+
+        val btnKakao = findViewById<Button>(R.id.btn_kakao_login)
+        btnKakao.setOnClickListener {
+            startKakaoLogin()
+        }
+
+        NaverIdLoginSDK.initialize(
+            this,
+            "jRAJ8Vp4K2awP6iW7RpY",
+            "a9pgmiQTTM",
+            "DATACLE"
+        )
+
+        val btnNaver = findViewById<Button>(R.id.btn_naver_login)
+        btnNaver.setOnClickListener {
+            startNaverLogin()
         }
 
         mBtnLogin.setOnClickListener {
@@ -254,5 +283,104 @@ class login : AppCompatActivity() {
             finish()
         }
     }
+    private fun startKakaoLogin() {
+        // 카카오로그인 결과 콜백 정의
+        val callback: (OAuthToken?, Throwable?) -> Unit = { token, error ->
+            if (error != null) {
+                Log.e(TAG, "카카오계정으로 로그인 실패", error)
+                Toast.makeText(this, "카카오 로그인 실패: ${error.localizedMessage}", Toast.LENGTH_SHORT)
+                    .show()
+            } else if (token != null) {
+                Log.i(TAG, "카카오계정으로 로그인 성공 ${token.accessToken}")
+                getKakaoUserInfo()
+            }
+        }
 
+        // 카카오톡이 설치되어 있으면 카카오톡으로 로그인, 아니면 카카오계정으로 로그인
+        if (UserApiClient.instance.isKakaoTalkLoginAvailable(this)) {
+            UserApiClient.instance.loginWithKakaoTalk(this) { token, error ->
+                if (error != null) {
+                    Log.e(TAG, "카카오톡으로 로그인 실패", error)
+
+                    // 사용자가 카카오톡 설치 후 로그인 진행 중 취소한 경우
+                    if (error is ClientError && error.reason == ClientErrorCause.Cancelled) {
+                        return@loginWithKakaoTalk
+                    }
+
+                    // 카카오톡 로그인 실패 시 카카오계정(웹)으로 재시도
+                    UserApiClient.instance.loginWithKakaoAccount(this, callback = callback)
+                } else if (token != null) {
+                    Log.i(TAG, "카카오톡으로 로그인 성공 ${token.accessToken}")
+                    getKakaoUserInfo()
+                }
+            }
+        } else {
+            // 카카오톡 미설치 시 카카오계정(웹)으로 로그인
+            UserApiClient.instance.loginWithKakaoAccount(this, callback = callback)
+        }
+    }
+    // 사용자 정보 요청 함수
+    private fun getKakaoUserInfo() {
+        UserApiClient.instance.me { user, error ->
+            if (error != null) {
+                Log.e(TAG, "사용자 정보 요청 실패", error)
+            } else if (user != null) {
+                val kakaoUserId = user.id.toString()
+                val email = user.kakaoAccount?.email
+                val nickname = user.kakaoAccount?.profile?.nickname
+
+                Log.d(TAG, "카카오 사용자 정보: ID=$kakaoUserId, 이메일=$email, 닉네임=$nickname")
+
+                // 기존 파이어베이스/데이터베이스 로그인 로직 연동
+                // ...
+                Toast.makeText(this, "${nickname ?: "사용자"}님 환영합니다!", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this, MainActivity::class.java))
+                finish()
+            }
+        }
+    }
+
+    private fun startNaverLogin() {
+        val oauthLoginCallback = object : OAuthLoginCallback {
+            override fun onSuccess() {
+                getNaverUserInfo()
+            }
+
+            override fun onFailure(httpStatus: Int, message: String) {
+                val errorCode = NaverIdLoginSDK.getLastErrorCode().code
+                val errorDescription = NaverIdLoginSDK.getLastErrorDescription()
+                Toast.makeText(this@login, "네이버 로그인 실패: $errorDescription", Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onError(errorCode: Int, message: String) {
+                onFailure(errorCode, message)
+            }
+        }
+
+        NaverIdLoginSDK.authenticate(this, oauthLoginCallback)
+    }
+    private fun getNaverUserInfo() {
+        NidOAuthLogin().callProfileApi(object : NidProfileCallback<NidProfileResponse> {
+            override fun onSuccess(result: NidProfileResponse) {
+                val email = result.profile?.email
+                val name = result.profile?.name
+                val nickname = result.profile?.nickname
+
+                Log.d(TAG, "네이버 정보 - 이메일: $email, 이름: $name, 닉네임: $nickname")
+
+                Toast.makeText(this@login, "${nickname ?: name ?: "사용자"}님 환영합니다!", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this@login, MainActivity::class.java))
+                finish()
+            }
+
+            override fun onFailure(httpStatus: Int, message: String) {
+                Log.e(TAG, "네이버 프로필 실패: status=$httpStatus, msg=$message")
+                Toast.makeText(this@login, "사용자 정보 불러오기 실패", Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onError(errorCode: Int, message: String) {
+                onFailure(errorCode, message)
+            }
+        })
+    }
 }

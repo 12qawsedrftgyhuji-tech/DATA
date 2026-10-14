@@ -8,6 +8,24 @@
     android:layout_height="match_parent"
     android:background="#FFFFFF"
     tools:context=".login">
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_kakao_login"
+        android:layout_width="307dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_kakao_login"
+        android:drawableStart="@drawable/ic_kakao_symbol"
+        android:drawablePadding="8dp"
+        android:paddingStart="88dp"
+        android:paddingEnd="88dp"
+        android:text="카카오 로그인"
+        android:textColor="#191919"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        app:backgroundTint="@null"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btn_google_login" />
 
     <TextView
         android:id="@+id/tv_title_assistant"
@@ -128,6 +146,25 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btn_register" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_naver_login"
+        android:layout_width="307dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_naver_login"
+        android:drawableStart="@drawable/ic_naver_symbol"
+        android:drawablePadding="8dp"
+        android:paddingStart="88dp"
+        android:paddingEnd="88dp"
+        android:text="네이버 로그인"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        app:backgroundTint="@null"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btn_kakao_login" />
 
     <TextView
         android:id="@+id/tv_terms"

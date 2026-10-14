@@ -45,6 +45,10 @@ android {
 }
 val camerax_version = "1.3.4"
 dependencies {
+    //네이버 로그인 추가
+    implementation("com.navercorp.nid:oauth:5.9.1")
+    //카카오로 로그인 추가
+    implementation("com.kakao.sdk:v2-user:2.20.1")
     //이미지 라벨링 관련 dependencies 설정
     implementation("com.google.mlkit:image-labeling-custom:17.0.3")
 

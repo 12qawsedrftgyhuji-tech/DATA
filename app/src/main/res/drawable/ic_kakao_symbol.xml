@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="18dp"
+    android:height="18dp"
+    android:viewportWidth="18"
+    android:viewportHeight="18">
+    <!-- 카카오 말풍선 심볼 -->
+    <path
+        android:fillColor="#191919"
+        android:pathData="M9,1.5 C4.86,1.5 1.5,4.1 1.5,7.31 C1.5,9.39 2.85,11.22 4.9,12.31 L4.11,15.22 C4.02,15.54 4.38,15.79 4.65,15.61 L8.13,13.3 C8.42,13.34 8.71,13.36 9,13.36 C13.14,13.36 16.5,10.76 16.5,7.55 C16.5,4.34 13.14,1.5 9,1.5 Z"/>
+</vector>

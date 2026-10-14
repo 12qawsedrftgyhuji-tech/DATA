@@ -26,6 +26,7 @@
         </intent>
     </queries>
     <application
+        android:name=".GlobalApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -34,6 +35,18 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Wpqkf">
+        <activity
+            android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Redirect URI: "kakao{네이티브앱키}://oauth" -->
+                <data android:host="oauth" android:scheme="c0fd3ed94485564b5e79fbb2f18aadb7" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".change"
             android:exported="false" />
