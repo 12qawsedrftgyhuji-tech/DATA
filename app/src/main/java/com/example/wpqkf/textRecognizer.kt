@@ -1,6 +1,7 @@
 package com.example.wpqkf
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -13,6 +14,8 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -20,6 +23,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.ImageButton
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -64,6 +68,8 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 const val DAILY_TOKEN_LIMIT = 100_000L
+
+var ttsSpeed = 1.0f
 //OCR 작업
 data class OcrBlock(
     val text: String,
@@ -417,7 +423,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (status == TextToSpeech.SUCCESS) {
             val r = tts?.setLanguage(Locale.KOREAN)
             ttsReady = r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED
-            tts?.setSpeechRate(0.85f)
+            tts?.setSpeechRate(ttsSpeed)
         }
     }
 
@@ -535,8 +541,8 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (text.isBlank()) {
                 Toast.makeText(this@textRecognizer, "음성이 인식되지 않았어요. 다시 말씀해 주세요", Toast.LENGTH_SHORT).show()
             } else {
-                etMessage.setText(text)
                 sendToGemini(text) // STT 완료 → 자동 전송
+                etMessage.text.clear()
             }
         }
 
@@ -680,6 +686,75 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             )
             insets
         }
+        //seekbar 읽기 속도 조절
+        val speedSeekBar = findViewById<SeekBar>(R.id.speedSeekBar)
+        val speedEditText = findViewById<EditText>(R.id.speedEditText)
+
+                 // tts.setSpeechRate(ttsSpeed) 에 사용
+        var isUpdating = false        // 서로 값 갱신 시 무한루프 방지
+
+        // 속도 <-> progress 변환
+        fun speedToProgress(speed: Float) = Math.round(speed * 10) - 5
+        fun progressToSpeed(progress: Int) = (progress + 5) / 10f
+
+        // 속도 적용 (SeekBar, EditText, TTS 모두 동기화)
+        fun applySpeed(speed: Float, updateEditText: Boolean = true, updateSeekBar: Boolean = true) {
+            val clamped = speed.coerceIn(0.5f, 2.0f)
+            ttsSpeed = clamped
+            isUpdating = true
+            if (updateSeekBar) speedSeekBar.progress = speedToProgress(clamped)
+            if (updateEditText) {
+                speedEditText.setText(String.format(java.util.Locale.US, "%.1f", clamped))
+                speedEditText.setSelection(speedEditText.text.length)
+            }
+            isUpdating = false
+            tts?.setSpeechRate(clamped)   // TTS 객체가 있다면 주석 해제
+        }
+
+        // 초기값
+        applySpeed(1.0f)
+
+        // SeekBar -> EditText
+        speedSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (isUpdating || !fromUser) return
+                applySpeed(progressToSpeed(progress), updateSeekBar = false)
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // EditText -> SeekBar (입력 중 실시간 반영, 범위 초과 시 막기)
+        speedEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (isUpdating) return
+                val value = s?.toString()?.toFloatOrNull() ?: return
+                if (value > 2.0f) {
+                    // 2 초과 입력 시 2.0으로 막기
+                    applySpeed(2.0f)
+                } else if (value >= 0.5f) {
+                    // 정상 범위면 입력 중인 텍스트는 건드리지 않고 SeekBar/TTS만 갱신
+                    applySpeed(value, updateEditText = false)
+                }
+                // 0.5 미만은 타이핑 중간값(예: "0")일 수 있어 완료 시점에 보정
+            }
+        })
+
+        // 입력 완료(키보드 Done / 포커스 해제) 시 0.5 미만 보정
+        speedEditText.setOnEditorActionListener { v, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                applySpeed(v.text.toString().toFloatOrNull() ?: 1.0f)
+                v.clearFocus()
+                (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .hideSoftInputFromWindow(v.windowToken, 0)
+                true
+            } else false
+        }
+        speedEditText.setOnFocusChangeListener { v, hasFocus ->
+            if (!hasFocus) applySpeed((v as EditText).text.toString().toFloatOrNull() ?: 1.0f)
+        }
         //userage 가져오기
         mFirebaseAuth = FirebaseAuth.getInstance()
         mDatabaseRef =
@@ -776,6 +851,9 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             val intent = Intent(this@textRecognizer, profile::class.java)
             startActivity(intent)
             finish()
+        }
+        findViewById<ImageButton>(R.id.btnClear).setOnClickListener {
+            confirmClearHistory() // 삭제 확인 다이얼로그 → 확인 시 Firestore 기록 + 화면 + Gemini 세션 초기화
         }
     }
 }
