@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="schedule_background">#F5F7FC</color>
+    <color name="schedule_surface">#FFFFFFFF</color>
+    <color name="schedule_primary">#4F64E8</color>
+    <color name="schedule_primary_soft">#E9EDFF</color>
+    <color name="schedule_text_primary">#182033</color>
+    <color name="schedule_text_secondary">#667085</color>
+    <color name="schedule_divider">#E4E8F0</color>
+
+    <string name="schedule_title">일정 관리</string>
+    <string name="schedule_subtitle">날짜별 할 일을 한눈에 확인하세요</string>
+    <string name="schedule_count">%1$d개</string>
+    <string name="schedule_empty">등록된 일정이 없습니다.\n+ 버튼을 눌러 일정을 추가해보세요.</string>
+    <string name="schedule_add">일정 추가</string>
+    <string name="schedule_uncategorized">미분류</string>
+    <string name="schedule_name_hint">일정 이름</string>
+    <string name="schedule_time_hint">시간 선택</string>
+    <string name="schedule_category_hint">분류 (선택)</string>
+    <string name="schedule_close">닫기</string>
+    <string name="schedule_cancel">취소</string>
+    <string name="schedule_name_required">일정 이름을 입력해주세요.</string>
+    <string name="schedule_time_required">시간을 선택해주세요.</string>
+</resources>

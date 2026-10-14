@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- 맨 위: 앱 아이콘 + 앱 이름 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="20dp">
+
+        <ImageView
+            android:id="@+id/ivDialogAppIcon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:contentDescription="앱 아이콘" />
+
+        <TextView
+            android:id="@+id/tvDialogAppName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- 1칸: 사용 시간 -->
+    <TextView
+        android:id="@+id/tvDialogUsageTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 2칸: 바로가기 버튼 -->
+    <Button
+        android:id="@+id/btnDialogShortcut"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="바로가기"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 3칸: 메모 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="메모"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/etDialogMemo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minLines="3"
+        android:gravity="top"
+        android:hint="이 앱에 대한 메모를 입력하세요"
+        android:background="@android:drawable/edit_text" />
+
+    <Button
+        android:id="@+id/btnDialogSaveMemo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginTop="8dp"
+        android:text="메모 저장" />
+
+</LinearLayout>
