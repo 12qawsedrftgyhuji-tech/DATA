@@ -86,7 +86,7 @@
         android:id="@+id/BtnTR"
         android:layout_width="196dp"
         android:layout_height="135dp"
-        android:text="카메라를 이용하여 키오스크 인식"
+        android:text="카메라를 이용하여 디지털 기기 인식"
         android:textSize="20sp"
         app:layout_constraintBottom_toTopOf="@+id/toolbar4"
         app:layout_constraintEnd_toEndOf="parent"
