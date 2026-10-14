@@ -193,7 +193,9 @@ class record : AppCompatActivity() {
      */
     private fun showAppDetailDialog(record: UsageRecord) {
         val pName = record.packageName
+
         val view = LayoutInflater.from(this).inflate(R.layout.dialog_app_detail, null)
+
 
         val ivIcon = view.findViewById<ImageView>(R.id.ivDialogAppIcon)
         val tvName = view.findViewById<TextView>(R.id.tvDialogAppName)

@@ -89,8 +89,6 @@ class postdt : AppCompatActivity() {
         mBtnHome = findViewById(R.id.home)
         mBtnAi = findViewById(R.id.ai)
         mBtnProfile = findViewById(R.id.profile)
-        btnPrev = findViewById(R.id.btnleft)
-        btnNext = findViewById(R.id.btnright)
         btndelete = findViewById(R.id.btndelete)
         btnmodify = findViewById(R.id.btnmodify)
 
@@ -124,22 +122,28 @@ class postdt : AppCompatActivity() {
         if (firebaseUser != null) {
             mDatabaseRef.child("UserAccount").child(firebaseUser.uid).addListenerForSingleValueEvent(object :
                 ValueEventListener {
-                //정보를 가져오는데 성공하면 자동으로 호출되는 함수
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    //가져온 정보를 변수 안에 형식에 맞게 가져오기
-                    val account = snapshot.getValue(user.UserAccount::class.java)
-                    val email = account?.emailId?.toString() ?: mFirebaseAuth.currentUser?.email
-                    
-                    val isdeveloper= ((email =="h_s_posan25_1219@dge.go.kr")|| (email=="guest@gmail.com"))
+                    try {
+                        // UserAccount 전체 객체 변환 대신 emailId 필드값만 안전하게 가져옴
+                        val email = snapshot.child("emailId").value?.toString()
+                            ?: mFirebaseAuth.currentUser?.email
 
-                    if (isdeveloper) {
-                        btndelete.visibility = View.VISIBLE
-                        btnmodify.visibility = View.VISIBLE
-                    } else {
+                        val isDeveloper = (email == "h_s_posan25_1219@dge.go.kr")
+
+                        if (isDeveloper) {
+                            btndelete.visibility = View.VISIBLE
+                            btnmodify.visibility = View.VISIBLE
+                        } else {
+                            btndelete.visibility = View.GONE
+                            btnmodify.visibility = View.GONE
+                        }
+                    } catch (e: Exception) {
+                        // 예외 발생 시 버튼 숨김 처리
                         btndelete.visibility = View.GONE
                         btnmodify.visibility = View.GONE
                     }
                 }
+
                 override fun onCancelled(error: DatabaseError) {
                     btndelete.visibility = View.GONE
                     btnmodify.visibility = View.GONE

@@ -14,7 +14,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.vertexai.vertexAI
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.initialize
@@ -27,6 +26,8 @@ class ai : AppCompatActivity() {
     private lateinit var mBtnHome4: ImageButton
     private lateinit var mBtnAi4: ImageButton
     private lateinit var mBtnProfile4: ImageButton
+    private lateinit var mBtnTR : Button
+    private lateinit var mBtnTa : Button
 
     fun isGoogleUser() :Boolean {
         val user = FirebaseAuth.getInstance().currentUser ?: return false
@@ -36,15 +37,17 @@ class ai : AppCompatActivity() {
         }
     }
 
-    fun checkUserAndShowDialog(AreuOk : Boolean) {
+    fun checkUserAndShowDialog(AreuOk: Boolean) {
         if (!AreuOk) {
-            MaterialAlertDialogBuilder(this) // Activity 내인 경우 this 사용
+            MaterialAlertDialogBuilder(this)
                 .setTitle("알림")
                 .setMessage("Gemini AI 기능은 구글 계정으로 로그인한 경우에만 사용할 수 있습니다.")
                 .setPositiveButton("확인") { dialog, _ ->
-                    dialog.dismiss() // 확인 누르면 닫기
+                    dialog.dismiss()
+                    startActivity(Intent(this@ai, MainActivity::class.java))
+                    finish()
                 }
-                .setCancelable(true) // 창 바깥 터치 시 닫기 허용
+                .setCancelable(false)
                 .show()
         }
     }
@@ -64,6 +67,8 @@ class ai : AppCompatActivity() {
         mBtnHome4 = findViewById(R.id.home)
         mBtnAi4 = findViewById(R.id.ai)
         mBtnProfile4 = findViewById(R.id.profile)
+        mBtnTR = findViewById(R.id.BtnTR)
+        mBtnTa = findViewById(R.id.btnTa)
 
         mBtnHome4.setOnClickListener {
             val intent = Intent(this@ai, MainActivity::class.java)
@@ -85,26 +90,15 @@ class ai : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
-        /*-- gemini api 키 받아와야 함 (성인 계정 필요) 그 뒤 작업 ㄱ
-        Firebase.initialize(this)
-
-        // App Check 디버그 프로바이더 설치
-        Firebase.appCheck.installAppCheckProviderFactory(
-            DebugAppCheckProviderFactory.getInstance()
-        )
-
-        val user = FirebaseAuth.getInstance().currentUser
-        // Firebase 인증이 완료된 상태에서 Vertex AI 서비스 초기화
-        val generativeModel = Firebase.vertexAI.generativeModel("gemini-1.5-flash")
-
-        lifecycleScope.launch {
-            try {
-                val response = generativeModel.generateContent("안녕 제미나이!")
-                Log.d("Gemini","응답 : ${response.text}")
-            } catch(e : Exception){
-                Log.e("Gemini","오류발생")
-            }
+        mBtnTR.setOnClickListener {
+            val intent = Intent(this@ai, textRecognizer::class.java)
+            startActivity(intent)
+            finish()
         }
-         */
+        mBtnTa.setOnClickListener {
+            val intent = Intent(this@ai, talkwithai::class.java)
+            startActivity(intent)
+            finish()
+        }
     }
 }

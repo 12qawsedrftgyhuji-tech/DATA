@@ -10,17 +10,15 @@
     <!-- 주석 : button-->
     <LinearLayout
         android:id="@+id/contentLayout"
-        android:layout_width="411dp"
-        android:layout_height="588dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:layout_marginBottom="8dp"
         android:orientation="vertical"
         android:padding="16dp"
         app:layout_constraintBottom_toTopOf="@id/bottomButtonLayout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.0">
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/tvDtCategory"
@@ -52,6 +50,7 @@
             android:textSize="14sp" />
 
         <View
+            android:id="@+id/grayline"
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginVertical="16dp"
@@ -59,8 +58,9 @@
 
         <WebView
             android:id="@+id/wvDtBody"
-            android:layout_width="382dp"
-            android:layout_height="403dp"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:minHeight="200dp" />
     </LinearLayout>
 
@@ -74,15 +74,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/contentLayout">
-
-        <Button
-            android:id="@+id/btnleft"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="15dp"
-            android:layout_marginEnd="15dp"
-            android:layout_weight="1"
-            android:text="이전" />
 
         <Button
             android:id="@+id/btnmodify"
@@ -102,15 +93,6 @@
             android:backgroundTint="#F43C3C"
             android:text="삭제"
             android:textColorLink="#673AB7" />
-
-        <Button
-            android:id="@+id/btnright"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="15dp"
-            android:layout_marginEnd="15dp"
-            android:layout_weight="1"
-            android:text="다음" />
 
 
     </LinearLayout>

@@ -24,7 +24,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <EditText
-        android:id="@+id/아이디입력"
+        android:id="@+id/et_id_input"
         android:layout_width="307dp"
         android:layout_height="40dp"
         android:layout_marginTop="62dp"
@@ -41,7 +41,7 @@
         app:layout_constraintTop_toBottomOf="@+id/tv_title_assistant" />
 
     <EditText
-        android:id="@+id/비번입력로그"
+        android:id="@+id/et_password_input"
         android:layout_width="307dp"
         android:layout_height="40dp"
         android:layout_marginTop="12dp"
@@ -55,10 +55,10 @@
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/아이디입력" />
+        app:layout_constraintTop_toBottomOf="@+id/et_id_input" />
 
     <Button
-        android:id="@+id/로그인버튼"
+        android:id="@+id/btn_login"
         android:layout_width="307dp"
         android:layout_height="40dp"
         android:layout_marginTop="20dp"
@@ -69,7 +69,7 @@
         app:backgroundTint="@null"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/비번입력로그" />
+        app:layout_constraintTop_toBottomOf="@+id/et_password_input" />
 
     <View
         android:id="@+id/divider_left"
@@ -80,7 +80,7 @@
         app:layout_constraintEnd_toStartOf="@+id/tv_or"
         app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/로그인버튼" />
+        app:layout_constraintTop_toBottomOf="@+id/btn_login" />
 
     <TextView
         android:id="@+id/tv_or"
@@ -106,7 +106,7 @@
         app:layout_constraintTop_toTopOf="@+id/divider_left" />
 
     <Button
-        android:id="@+id/회원가입버튼"
+        android:id="@+id/btn_register"
         android:layout_width="307dp"
         android:layout_height="40dp"
         android:layout_marginTop="20dp"
@@ -120,14 +120,14 @@
         app:layout_constraintTop_toBottomOf="@+id/divider_left" />
 
     <com.google.android.gms.common.SignInButton
-        android:id="@+id/구글로그인버튼"
+        android:id="@+id/btn_google_login"
         android:layout_width="307dp"
         android:layout_height="44dp"
         android:layout_marginTop="12dp"
         app:buttonSize="wide"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/회원가입버튼" />
+        app:layout_constraintTop_toBottomOf="@+id/btn_register" />
 
     <TextView
         android:id="@+id/tv_terms"

@@ -20,7 +20,7 @@
         app:layout_constraintTop_toBottomOf="@+id/textView4" />
 
     <Button
-        android:id="@+id/사진바꿈"
+        android:id="@+id/btn_change_photo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="프로필 사진 변경"
@@ -30,7 +30,7 @@
         app:layout_constraintTop_toBottomOf="@+id/프로필이미지" />
 
     <EditText
-        android:id="@+id/이름바꿈"
+        android:id="@+id/et_change_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="50dp"
@@ -39,10 +39,10 @@
         android:inputType="text"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/이메일정보" />
+        app:layout_constraintTop_toBottomOf="@+id/tv_email_info" />
 
     <EditText
-        android:id="@+id/나이바꿈"
+        android:id="@+id/et_change_age"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="50dp"
@@ -52,10 +52,10 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.502"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/이름바꿈" />
+        app:layout_constraintTop_toBottomOf="@+id/et_change_name" />
 
     <EditText
-        android:id="@+id/전번바꿈"
+        android:id="@+id/et_change_phone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="50dp"
@@ -65,29 +65,29 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.502"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/나이바꿈" />
+        app:layout_constraintTop_toBottomOf="@+id/et_change_age" />
 
     <Button
-        android:id="@+id/정보바꿈버튼"
+        android:id="@+id/btn_change_info"
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:text="바꾸기"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/돌아가기"
+        app:layout_constraintEnd_toStartOf="@+id/btn_back"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
-        android:id="@+id/돌아가기"
+        android:id="@+id/btn_back"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="돌아가기"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/정보바꿈버튼" />
+        app:layout_constraintStart_toEndOf="@id/btn_change_info" />
 
     <TextView
-        android:id="@+id/이메일정보"
+        android:id="@+id/tv_email_info"
         android:layout_width="226dp"
         android:layout_height="21dp"
         android:layout_marginTop="250dp"

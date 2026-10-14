@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".textRecognizer">
+
+    <!-- 왼쪽(약 42%) / 오른쪽 영역 구분선 -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideCenter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.42" />
+
+    <!-- 카메라 화면 (좌측 상단, 3:4 비율) -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_margin="8dp"
+        app:layout_constraintDimensionRatio="3:4"
+        app:layout_constraintEnd_toStartOf="@id/guideCenter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:scaleType="fillCenter" />
+
+    <!-- 마이크 버튼 (좌측 중간) -->
+
+    <!-- 최소값 표시 -->
+    <TextView
+        android:id="@+id/speedMinLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="0.5x"
+        android:textSize="12sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/speedSeekBar" />
+
+    <!-- 기본값(1.0) 표시: 가운데 -->
+
+    <!-- 최대값 표시 -->
+    <TextView
+        android:id="@+id/speedMidLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="1.0x"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toStartOf="@id/guideCenter"
+        app:layout_constraintHorizontal_bias="0.36"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/speedSeekBar" />
+
+    <TextView
+        android:id="@+id/speedMaxLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:text="2.0x"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toStartOf="@id/guideCenter"
+        app:layout_constraintTop_toBottomOf="@+id/speedSeekBar" />
+    <!-- 읽기 속도 라벨 -->
+    <TextView
+        android:id="@+id/speedLabel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="8dp"
+        android:text="읽기 속도 조절"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@+id/speedEditText"
+        app:layout_constraintEnd_toStartOf="@+id/speedEditText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/speedEditText" />
+
+    <!-- 읽기 속도 직접 입력 -->
+    <EditText
+        android:id="@+id/speedEditText"
+        android:layout_width="64dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        android:gravity="center"
+        android:imeOptions="actionDone"
+        android:inputType="numberDecimal"
+        android:maxLength="4"
+        android:text="1.0"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toStartOf="@id/guideCenter"
+        app:layout_constraintTop_toBottomOf="@+id/switchAutoRead" />
+
+    <!-- 읽기 속도 SeekBar (0.5 ~ 2.0) -->
+    <SeekBar
+        android:id="@+id/speedSeekBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="16dp"
+        android:max="15"
+        android:progress="5"
+        app:layout_constraintEnd_toStartOf="@id/guideCenter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/speedEditText" />
+    <!-- 마이크 버튼 -->
+    <ImageButton
+        android:id="@+id/btnMic"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="28dp"
+        android:background="@drawable/bg_circle"
+        android:padding="12dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_mic_white"
+        app:layout_constraintEnd_toStartOf="@id/guideCenter"
+        app:layout_constraintHorizontal_bias="0.505"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/previewView" />
+
+    <TextView
+        android:id="@+id/micStatus"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:gravity="center"
+        android:text="마이크를 눌러 말씀하세요"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toStartOf="@id/guideCenter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnMic" />
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/switchAutoRead"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="16dp"
+        android:checked="true"
+        android:text="읽어주기"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toStartOf="@id/guideCenter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/micStatus" />
+
+    <!-- Gemini 답변 영역 (우측) -->
+    <ScrollView
+        android:id="@+id/answerScroll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_margin="8dp"
+        android:background="@drawable/bg_box"
+        app:layout_constraintBottom_toTopOf="@id/inputBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/guideCenter"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tvAnswer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lineSpacingExtra="4dp"
+            android:padding="12dp"
+            android:text="Gemini 답변이 여기에 표시됩니다."
+            android:textSize="16sp" />
+    </ScrollView>
+
+    <!-- 대화 초기화 버튼 (답변 영역 우측 상단) -->
+
+    <ImageButton
+        android:id="@+id/btnClear"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:layout_marginTop="28dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_send_circle"
+        android:contentDescription="대화 초기화"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
+        android:src="@android:drawable/ic_menu_delete"
+        app:layout_constraintEnd_toStartOf="@id/guideCenter"
+        app:layout_constraintTop_toBottomOf="@+id/speedSeekBar"
+        app:tint="#FFFFFF" />
+
+
+    <!-- 하단 입력창 + 전송 버튼 -->
+
+    <TextView
+        android:id="@+id/ClearTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:layout_marginEnd="8dp"
+        android:text="대화 기록 삭제:"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toStartOf="@+id/btnClear"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/speedMinLabel" />
+
+    <LinearLayout
+        android:id="@+id/inputBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@id/toolbar4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <EditText
+            android:id="@+id/etMessage"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_box"
+            android:hint="Gemini에게 질문하기"
+            android:imeOptions="actionSend"
+            android:inputType="text"
+            android:maxLines="3"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textSize="16sp" />
+        <ImageButton
+            android:id="@+id/btnSend"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_send_circle"
+            android:contentDescription="Gemini에게 보내기"
+            android:src="@drawable/ic_send"
+            app:tint="#FFFFFF"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+    </LinearLayout>
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar4"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@drawable/toolbar_border"
+        app:contentInsetEnd="0dp"
+        app:contentInsetLeft="0dp"
+        app:contentInsetStart="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/schedule"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="일정"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_schedule" />
+
+            <ImageButton
+                android:id="@+id/record"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="기록"
+                android:padding="15dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_record" />
+
+            <ImageButton
+                android:id="@+id/home"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="홈"
+                android:padding="16dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_home" />
+
+            <ImageButton
+                android:id="@+id/ai"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="AI"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_ai" />
+
+            <ImageButton
+                android:id="@+id/profile"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="프로필"
+                android:padding="16dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_profile" />
+        </LinearLayout>
+    </androidx.appcompat.widget.Toolbar>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
