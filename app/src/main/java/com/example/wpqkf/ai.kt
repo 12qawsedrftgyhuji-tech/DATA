@@ -29,11 +29,11 @@ class ai : AppCompatActivity() {
     private lateinit var mBtnTR : Button
     private lateinit var mBtnTa : Button
 
-    fun isGoogleUser() :Boolean {
+    fun isEmailUser() :Boolean {
         val user = FirebaseAuth.getInstance().currentUser ?: return false
 
         return user.providerData.any{
-            profile -> profile.providerId == GoogleAuthProvider.PROVIDER_ID
+            profile ->  (profile.providerId == GoogleAuthProvider.PROVIDER_ID) || (profile.providerId == "oidc.kakao") || (profile.providerId == "naver")
         }
     }
 
@@ -61,7 +61,7 @@ class ai : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        checkUserAndShowDialog(isGoogleUser())//구글 계정일 때만 ai 기능-> gemini 쓸 수 있게끔 ㄱㄱ
+        checkUserAndShowDialog(isEmailUser())//구글 계정일 때만 ai 기능-> gemini 쓸 수 있게끔 ㄱㄱ
         mBtnSchedule4 = findViewById(R.id.schedule)
         mBtnRecord4 = findViewById(R.id.record)
         mBtnHome4 = findViewById(R.id.home)

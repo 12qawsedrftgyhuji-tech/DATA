@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
@@ -40,6 +39,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.ai.client.generativeai.Chat
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -70,6 +70,7 @@ import java.util.concurrent.Executors
 const val DAILY_TOKEN_LIMIT = 100_000L
 
 var ttsSpeed = 1.0f
+
 //OCR 작업
 data class OcrBlock(
     val text: String,
@@ -77,11 +78,13 @@ data class OcrBlock(
     val lines: List<String>,
     val matchedKeywords: List<String>
 )
+
 data class KioskResult(
     val isKiosk: Boolean,
     val score: Int,
     val blocks: List<OcrBlock>
 )
+
 class TextAnalyzer(
     private val onResult: (KioskResult) -> Unit
 ) : ImageAnalysis.Analyzer {
@@ -234,43 +237,54 @@ class ChatRepository {
         }.addOnFailureListener { onDone() }
     }
 }
+
 private var username = "사용자"
+private var userage = -1
+
 //Gemini 대화 작업 (채팅 세션으로 대화 맥락 유지)
+// 이름/나이가 확정된 뒤 init()을 호출해야 모델이 만들어진다.
 class GeminiClient {
 
-    private val model = GenerativeModel(
-        modelName = "gemini-3.1-flash-lite",
-        apiKey = BuildConfig.GEMINI_API_KEY,
-        systemInstruction = content {
-            text(
-                """
-                당신은 디지털 기기(ex:키오스크) 사용이 어려운 사용자를 돕는 친절한 도우미입니다.
-                사용자의 이름은 ${username}입니다. 사용자의 나이는
-                사용자가 질문할 때마다 카메라로 촬영한 키오스크 화면의 OCR 텍스트가 함께 전달됩니다.
-                OCR 오타가 있을 수 있으니 문맥으로 보정하세요.
-                현재 화면을 기준으로, 디지털 소외 계층 분들도 이해할 수 있게 쉬운 말로 단계별로 짧게 답하세요.
-                OCR텍스트는 높임말로 변환하지말고 있는 그대로 전달해주세요.(주문하기 버튼을 주문하세요 버튼으로 치환 금지)
-                이전 대화 내용을 참고해 후속 질문에도 자연스럽게 답하세요.
-                """.trimIndent()
-            )
-        }
-    )
+    private var model: GenerativeModel? = null
+    private var chat: Chat? = null
 
-    private var chat = model.startChat()
+    val isReady: Boolean get() = chat != null
 
-    // Firestore에서 불러온 과거 대화를 채팅 세션에 복원
-    fun setHistory(turns: List<ChatTurn>) {
-        val history = turns.flatMap { t ->
-            listOf(
-                content("user") { text(t.question) },
-                content("model") { text(t.answer) }
-            )
-        }
-        chat = model.startChat(history)
+    fun init(name: String, age: Int, history: List<ChatTurn> = emptyList()) {
+        val nameText = if (name.isNotBlank()) "사용자의 이름은 ${name}입니다." else ""
+        val ageText = if (age > 0) "사용자의 나이는 ${age}세입니다. 나이에 맞게 존대 등을 조절하세요." else ""
+
+        val m = GenerativeModel(
+            modelName = "gemini-3.1-flash-lite",
+            apiKey = BuildConfig.GEMINI_API_KEY,
+            systemInstruction = content {
+                text(
+                    """
+                    당신은 디지털 기기(ex:키오스크) 사용이 어려운 사용자를 돕는 친절한 도우미입니다.
+                    $nameText
+                    $ageText
+                    사용자가 질문할 때마다 카메라로 촬영한 디지털 기기의 화면의 OCR 텍스트가 함께 전달됩니다.
+                    OCR 오타가 있을 수 있으니 문맥으로 보정하세요.
+                    현재 화면을 기준으로, 디지털 소외 계층 분들도 이해할 수 있게 쉬운 말로 단계별로 짧게 답하세요.
+                    OCR텍스트는 높임말로 변환하지말고 있는 그대로 전달해주세요.(예를 들어 주문하기 버튼을 주문하세요 버튼으로 치환 금지)
+                    이전 대화 내용을 참고해 후속 질문에도 자연스럽게 답하세요.
+                    """.trimIndent()
+                )
+            }
+        )
+        model = m
+        chat = m.startChat(history.toHistoryContents())
+    }
+
+    private fun List<ChatTurn>.toHistoryContents() = flatMap { t ->
+        listOf(
+            content("user") { text(t.question) },
+            content("model") { text(t.answer) }
+        )
     }
 
     fun resetChat() {
-        chat = model.startChat()
+        chat = model?.startChat()
     }
 
     fun ask(
@@ -279,6 +293,12 @@ class GeminiClient {
         onResult: (answer: String, totalTokens: Int) -> Unit,
         onError: (Throwable) -> Unit
     ) {
+        val c = chat
+        if (c == null) {
+            onError(IllegalStateException("Gemini 모델이 아직 초기화되지 않았습니다."))
+            return
+        }
+
         val prompt = """
             [현재 화면 OCR 텍스트]
             ${ocrText.ifBlank { "(인식된 텍스트 없음)" }}
@@ -289,7 +309,7 @@ class GeminiClient {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val response = chat.sendMessage(prompt)
+                val response = c.sendMessage(prompt)
                 onResult(response.text ?: "", response.usageMetadata?.totalTokenCount ?: 0)
             } catch (e: Exception) {
                 onError(e)
@@ -331,7 +351,6 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var lastPartialText = ""
     private var googleUser = false
 
-    private var userage = 80
     // 대화 기록
     private val chatRepo = ChatRepository()
     private val chatLog = StringBuilder()
@@ -371,13 +390,15 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             else Toast.makeText(this, "마이크 권한이 필요합니다", Toast.LENGTH_SHORT).show()
         }
 
-    fun isGoogleUser(): Boolean {
+    fun isEmailUser(): Boolean {
         val user = FirebaseAuth.getInstance().currentUser ?: return false
 
         return user.providerData.any { profile ->
-            profile.providerId == GoogleAuthProvider.PROVIDER_ID
+            (profile.providerId == GoogleAuthProvider.PROVIDER_ID) || (profile.providerId == "oidc.kakao") || (profile.providerId == "naver")
         }
     }
+
+
 
     fun checkUserAndShowDialog(AreuOk: Boolean) {
         if (!AreuOk) {
@@ -572,9 +593,13 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
         answerScroll.post { answerScroll.fullScroll(View.FOCUS_DOWN) }
     }
 
-    private fun loadHistory() {
+    // 이름/나이가 확정된 뒤에 호출: 과거 대화를 불러와 모델을 만들고 화면에 표시
+    private fun initGemini() {
+        if (!googleUser) return
         chatRepo.loadRecent(20) { turns ->
-            geminiClient.setHistory(turns)
+            if (isFinishing || isDestroyed) return@loadRecent
+            geminiClient.init(username, userage, turns)
+            chatLog.clear()
             turns.forEach { chatLog.append("질문: ${it.question}\n답변: ${it.answer}\n\n") }
             renderLog()
         }
@@ -598,6 +623,10 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun sendToGemini(question: String) {
         if (!googleUser) {
             checkUserAndShowDialog(false)
+            return
+        }
+        if (!geminiClient.isReady) {
+            Toast.makeText(this, "AI를 준비하는 중이에요. 잠시 후 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
             return
         }
         val q = question.trim()
@@ -686,11 +715,20 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             )
             insets
         }
+
+        // 새 UI 연결 (콜백에서 쓰이는 뷰들은 먼저 연결)
+        btnMic = findViewById(R.id.btnMic)
+        setMicIdle()
+        btnSend = findViewById(R.id.btnSend)
+        micStatus = findViewById(R.id.micStatus)
+        tvAnswer = findViewById(R.id.tvAnswer)
+        etMessage = findViewById(R.id.etMessage)
+        answerScroll = findViewById(R.id.answerScroll)
+
         //seekbar 읽기 속도 조절
         val speedSeekBar = findViewById<SeekBar>(R.id.speedSeekBar)
         val speedEditText = findViewById<EditText>(R.id.speedEditText)
 
-                 // tts.setSpeechRate(ttsSpeed) 에 사용
         var isUpdating = false        // 서로 값 갱신 시 무한루프 방지
 
         // 속도 <-> progress 변환
@@ -704,11 +742,11 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             isUpdating = true
             if (updateSeekBar) speedSeekBar.progress = speedToProgress(clamped)
             if (updateEditText) {
-                speedEditText.setText(String.format(java.util.Locale.US, "%.1f", clamped))
+                speedEditText.setText(String.format(Locale.US, "%.1f", clamped))
                 speedEditText.setSelection(speedEditText.text.length)
             }
             isUpdating = false
-            tts?.setSpeechRate(clamped)   // TTS 객체가 있다면 주석 해제
+            tts?.setSpeechRate(clamped)
         }
 
         // 초기값
@@ -755,31 +793,32 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
         speedEditText.setOnFocusChangeListener { v, hasFocus ->
             if (!hasFocus) applySpeed((v as EditText).text.toString().toFloatOrNull() ?: 1.0f)
         }
-        //userage 가져오기
+
+        // ★ googleUser / username 은 Firebase 요청보다 "먼저" 세팅해야 한다
+        googleUser = isEmailUser()
+        username = FirebaseAuth.getInstance().currentUser?.displayName.orEmpty()
+
+        // ★ userage 가져오기 → 가져온 뒤에 Gemini 초기화
         mFirebaseAuth = FirebaseAuth.getInstance()
-        mDatabaseRef =
-            FirebaseDatabase.getInstance().getReference("UserAccount")
+        mDatabaseRef = FirebaseDatabase.getInstance().getReference("UserAccount")
         val firebaseUser = mFirebaseAuth.currentUser
         if (firebaseUser != null) {
-            //사용자의 고유 번호로 들어가서 이메일 칸을 찾고 데이터는 한번만 일고 파이어베이스에 정보 요청하기
+            // 사용자의 고유 번호로 들어가서 정보를 한 번만 읽기
             mDatabaseRef.child(firebaseUser.uid).addListenerForSingleValueEvent(object :
                 ValueEventListener {
-                //정보를 자져오는데 성공하면 자동으로 호출되는 함수
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    //가져온 정보를 변수 안에 형식에 맞게 가져오기
                     val account = snapshot.getValue(UserAccount::class.java)
-                    if (account != null) {
-                        userage = account.age?.toString()?.toIntOrNull() ?: 0
-                    }
+                    userage = account?.age?.toString()?.toIntOrNull() ?: -1
+                    initGemini() // 나이 확정 후 모델 생성 + 기록 불러오기
                 }
 
                 override fun onCancelled(error: DatabaseError) {
                     Toast.makeText(this@textRecognizer, "사용자 정보를 가져오지 못했습니다.", Toast.LENGTH_SHORT).show()
+                    initGemini() // 실패해도 일단 초기화 (나이 -1 → 프롬프트에서 생략됨)
                 }
             })
         }
-        //username 가져오기.
-        username = FirebaseAuth.getInstance().currentUser?.displayName.orEmpty()
+
         //CameraX - MLkit 작업
         previewView = findViewById(R.id.previewView) // preview 화면을 의미한다.
         cameraExecutor = Executors.newSingleThreadExecutor() // 싱글쓰레드에서 카메라가 작업할 수 있도록 도와줄 변수다.
@@ -792,16 +831,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
 
-        googleUser = isGoogleUser()
-        checkUserAndShowDialog(googleUser)//구글 계정일 때만 ai 기능-> gemini 쓸 수 있게끔 ㄱㄱ
-
-        // 새 UI 연결
-        btnMic = findViewById(R.id.btnMic)
-        setMicIdle()
-        btnSend = findViewById(R.id.btnSend)
-        micStatus = findViewById(R.id.micStatus)
-        tvAnswer = findViewById(R.id.tvAnswer)
-        etMessage = findViewById(R.id.etMessage)
+        checkUserAndShowDialog(googleUser) // 구글 계정일 때만 ai 기능 -> gemini 쓸 수 있게끔
 
         // 읽어주기 스위치 + TTS 초기화
         switchAutoRead = findViewById(R.id.switchAutoRead)
@@ -819,12 +849,11 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             } else false
         }
 
-        answerScroll = findViewById(R.id.answerScroll)
         btnSend.setOnLongClickListener { // 전송 버튼 길게 누르면 기록 삭제
             confirmClearHistory()
             true
         }
-        if (googleUser) loadHistory()
+        // (기존 if (googleUser) loadHistory() 는 삭제 → initGemini()가 대신 처리)
 
         mBtnSchedule4 = findViewById(R.id.schedule)
         mBtnRecord4 = findViewById(R.id.record)
