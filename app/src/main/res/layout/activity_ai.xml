@@ -153,4 +153,18 @@
         app:layout_constraintStart_toStartOf="@id/circleTa"
         app:layout_constraintTop_toTopOf="@id/circleTa" />
 
+    <!-- ===== 버튼 3: 외부 앱 화면 AI 도움받기 ===== -->
+    <Button
+        android:id="@+id/btnStartExternalAi"
+        android:layout_width="330dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="16dp"
+        android:backgroundTint="#2196F3"
+        android:text="외부 앱 화면 AI 도움받기"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnTa" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
