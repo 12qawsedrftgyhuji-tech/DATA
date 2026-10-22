@@ -233,7 +233,7 @@
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
             android:maxLines="2"
-            android:textSize="13sp" />
+            android:textSize="15sp" />
 
         <Button
             android:id="@+id/btnSuggest2"
@@ -242,7 +242,7 @@
             android:layout_marginStart="4dp"
             android:layout_weight="1"
             android:maxLines="2"
-            android:textSize="13sp" />
+            android:textSize="15sp" />
     </LinearLayout>
 
     <!-- 하단 입력창 + 전송 버튼 -->

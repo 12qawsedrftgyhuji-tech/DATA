@@ -292,6 +292,34 @@ class GeminiClient {
     private var suggestModel: GenerativeModel? = null   // AI 추천 전용 (대화 기록 없음)
 
     val isReady: Boolean get() = chat != null
+    val isSuggestReady: Boolean get() = suggestModel != null
+
+    fun initSuggest() {
+        if (suggestModel != null) return
+        suggestModel = GenerativeModel(
+            modelName = "gemini-3.5-flash-lite",
+            apiKey = BuildConfig.GEMINI_API_KEY,
+            generationConfig = generationConfig {
+                maxOutputTokens = 1024          // 여유 있게 (프롬프트가 짧게 답하도록 제한하고 있어서 실제 사용량은 적음)
+                temperature = 0.4f
+            },
+            systemInstruction = content {
+                text(
+                    """
+당신은 디지털 기기(키오스크 등) 사용이 어려운 사용자를 돕는 도우미입니다.
+화면 OCR 텍스트를 보고 사용자가 지금 물어볼 만한 질문 2개를 추천하세요.
+- 정확히 2줄, 각 줄은 "주제|질문" 형식입니다.
+- 주제는 5~8자, 질문은 25자 이내의 쉬운 말로 쓰세요.
+- 화면에 실제로 보이는 단어(버튼 이름 등)를 활용하세요.
+- 다른 설명, 번호, 마크다운은 쓰지 마세요.
+예:
+결제 방법|결제는 어떻게 해요?
+포장 선택|포장하려면 뭘 눌러야 해요?
+""".trimIndent()
+                )
+            }
+        )
+    }
 
     private suspend fun <T> withRetry(
         times: Int = 2,
@@ -340,30 +368,6 @@ class GeminiClient {
         )
         model = m
         chat = m.startChat(history.toHistoryContents())
-
-        suggestModel = GenerativeModel(
-            modelName = "gemini-3.5-flash-lite",
-            apiKey = BuildConfig.GEMINI_API_KEY,
-            generationConfig = generationConfig {
-                maxOutputTokens = 1024          // 여유 있게 (프롬프트가 짧게 답하도록 제한하고 있어서 실제 사용량은 적음)
-                temperature = 0.4f
-            },
-            systemInstruction = content {
-                text(
-                    """
-당신은 디지털 기기(키오스크 등) 사용이 어려운 사용자를 돕는 도우미입니다.
-화면 OCR 텍스트를 보고 사용자가 지금 물어볼 만한 질문 2개를 추천하세요.
-- 정확히 2줄, 각 줄은 "주제|질문" 형식입니다.
-- 주제는 5~8자, 질문은 25자 이내의 쉬운 말로 쓰세요.
-- 화면에 실제로 보이는 단어(버튼 이름 등)를 활용하세요.
-- 다른 설명, 번호, 마크다운은 쓰지 마세요.
-예:
-결제 방법|결제는 어떻게 해요?
-포장 선택|포장하려면 뭘 눌러야 해요?
-""".trimIndent()
-                )
-            }
-        )
     }
 
     private fun List<ChatTurn>.toHistoryContents() = flatMap { t ->
@@ -569,7 +573,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             checkUserAndShowDialog(false)
             return
         }
-        if (!geminiClient.isReady) {
+        if (!geminiClient.isSuggestReady) {
             Toast.makeText(this, "질문을 준비하는 중이에요. 잠시 후 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
             return
         }
@@ -1056,6 +1060,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         // ★ googleUser / username 은 Firebase 요청보다 "먼저" 세팅해야 한다
         googleUser = isEmailUser()
+        if (googleUser) geminiClient.initSuggest()   // 추가
         username = FirebaseAuth.getInstance().currentUser?.displayName.orEmpty()
 
         // ★ userage 가져오기 → 가져온 뒤에 Gemini 초기화
