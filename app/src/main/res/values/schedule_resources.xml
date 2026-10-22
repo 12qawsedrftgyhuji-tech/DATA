@@ -21,4 +21,20 @@
     <string name="schedule_cancel">취소</string>
     <string name="schedule_name_required">일정 이름을 입력해주세요.</string>
     <string name="schedule_time_required">시간을 선택해주세요.</string>
+
+    <!-- Google Calendar Integration -->
+    <string name="google_calendar_not_connected">Google Calendar: 미연동</string>
+    <string name="google_calendar_connected">Google Calendar: %1$s</string>
+    <string name="google_calendar_connect">Google 계정 연결</string>
+    <string name="google_calendar_manage">계정 관리</string>
+    <string name="google_calendar_disconnect">연동 해제</string>
+    <string name="google_calendar_change_account">계정 변경</string>
+    <string name="google_calendar_option_add">Google Calendar에도 추가</string>
+    <string name="google_calendar_end_time_hint">종료 시간 선택</string>
+    <string name="google_calendar_end_time_required">종료 시간을 선택해주세요.</string>
+    <string name="google_calendar_add_success">일정 및 Google Calendar에 등록되었습니다.</string>
+    <string name="google_calendar_add_partial">앱 내 일정은 추가되었으나 Google Calendar 등록에 실패했습니다.</string>
+    <string name="google_calendar_retry_prompt">Google Calendar 등록 실패</string>
+    <string name="google_calendar_retry_message">앱 내 일정은 정상 등록되었으나, Google Calendar 등록 중 오류가 발생했습니다.\n(%1$s)\n\n다시 시도하시겠습니까?</string>
+    <string name="google_calendar_retry_button">재시도</string>
 </resources>
