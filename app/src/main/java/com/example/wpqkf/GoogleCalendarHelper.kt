@@ -92,10 +92,12 @@ object GoogleCalendarHelper {
             val (endDateTime, endTz) = buildEventDateTime(endCal)
 
             val event = Event().apply {
-                summary = title
-                description = if (category.isNotBlank()) "카테고리: $category" else null
-                start = EventDateTime().setDateTime(startDateTime).setTimeZone(startTz)
-                end = EventDateTime().setDateTime(endDateTime).setTimeZone(endTz)
+                setSummary(title)
+                if (category.isNotBlank()) {
+                    setDescription("카테고리: $category")
+                }
+                setStart(EventDateTime().setDateTime(startDateTime).setTimeZone(startTz))
+                setEnd(EventDateTime().setDateTime(endDateTime).setTimeZone(endTz))
             }
 
             val createdEvent = calendarService.events().insert("primary", event).execute()
