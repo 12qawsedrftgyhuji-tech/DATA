@@ -390,13 +390,15 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             else Toast.makeText(this, "마이크 권한이 필요합니다", Toast.LENGTH_SHORT).show()
         }
 
-    fun isGoogleUser(): Boolean {
+    fun isEmailUser(): Boolean {
         val user = FirebaseAuth.getInstance().currentUser ?: return false
 
         return user.providerData.any { profile ->
-            profile.providerId == GoogleAuthProvider.PROVIDER_ID
+            (profile.providerId == GoogleAuthProvider.PROVIDER_ID) || (profile.providerId == "oidc.kakao") || (profile.providerId == "naver")
         }
     }
+
+
 
     fun checkUserAndShowDialog(AreuOk: Boolean) {
         if (!AreuOk) {
@@ -793,7 +795,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         // ★ googleUser / username 은 Firebase 요청보다 "먼저" 세팅해야 한다
-        googleUser = isGoogleUser()
+        googleUser = isEmailUser()
         username = FirebaseAuth.getInstance().currentUser?.displayName.orEmpty()
 
         // ★ userage 가져오기 → 가져온 뒤에 Gemini 초기화

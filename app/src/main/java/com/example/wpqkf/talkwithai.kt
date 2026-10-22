@@ -93,10 +93,10 @@ class talkwithai : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
     // ---------- 구글 로그인 확인 (기존 기능) ----------
-    fun isGoogleUser(): Boolean {
+    fun isEmailUser(): Boolean {
         val user = FirebaseAuth.getInstance().currentUser ?: return false
         return user.providerData.any { profile ->
-            profile.providerId == GoogleAuthProvider.PROVIDER_ID
+            (profile.providerId == GoogleAuthProvider.PROVIDER_ID) || (profile.providerId == "oidc.kakao") || (profile.providerId == "naver")
         }
     }
 
@@ -133,7 +133,7 @@ class talkwithai : AppCompatActivity(), TextToSpeech.OnInitListener {
         username = FirebaseAuth.getInstance().currentUser?.displayName.orEmpty()
 
 
-        checkUserAndShowDialog(isGoogleUser())
+        checkUserAndShowDialog(isEmailUser())
 
         setupGreetingGradient()
         tts = TextToSpeech(this, this)
@@ -204,8 +204,8 @@ class talkwithai : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun sendMessage(raw: String) {
-        // 구글 계정이 아니면 AI 사용 불가 (기존 정책 유지)
-        if (!isGoogleUser()) {
+        // 구글/카카오/네이버 계정이 아니면 AI 사용 불가 (기존 정책 유지)
+        if (!isEmailUser()) {
             checkUserAndShowDialog(false)
             return
         }
