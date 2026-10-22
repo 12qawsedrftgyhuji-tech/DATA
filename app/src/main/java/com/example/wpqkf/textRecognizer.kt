@@ -320,9 +320,21 @@ class GeminiClient {
             }
         )
     }
+    private fun Throwable.isRetryable(): Boolean {
+        var t: Throwable? = this
+        while (t != null) {
+            if (t is java.net.SocketTimeoutException ||
+                t is java.io.IOException) return true
+            val msg = t.message.orEmpty()
+            if (msg.contains("503") || msg.contains("UNAVAILABLE") ||
+                msg.contains("high demand") || msg.contains("overloaded")) return true
+            t = t.cause
+        }
+        return false
+    }
 
     private suspend fun <T> withRetry(
-        times: Int = 2,
+        times: Int = 3,
         initialDelayMs: Long = 500L,
         block: suspend () -> T
     ): T {
@@ -331,17 +343,12 @@ class GeminiClient {
             try {
                 return block()
             } catch (e: Exception) {
-                val msg = e.message.orEmpty()
-                val retryable = msg.contains("503") ||
-                        msg.contains("UNAVAILABLE") ||
-                        msg.contains("high demand") ||
-                        msg.contains("overloaded")
-                if (!retryable) throw e
+                if (!e.isRetryable()) throw e
                 kotlinx.coroutines.delay(delayMs)
                 delayMs *= 2
             }
         }
-        return block()   // 마지막 시도는 예외를 그대로 던짐
+        return block()
     }
 
     fun init(name: String, age: Int, history: List<ChatTurn> = emptyList()) {
@@ -424,8 +431,9 @@ class GeminiClient {
         }
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val response = withRetry { m.generateContent("[화면 OCR 텍스트]\n${ocrText.take(600)}") }
-
+                val response = kotlinx.coroutines.withTimeout(15_000) {
+                    m.generateContent("[화면 OCR 텍스트]\n${ocrText.take(600)}")
+                }
                 val list = response.text.orEmpty().lines()
                     .map { it.trim().trimStart('-', '*', ' ') }
                     .filter { it.contains("|") }
@@ -585,44 +593,48 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
+        // 캐시된 사용량으로 한도 확인 (Firestore 응답을 기다리지 않음)
+        val used = cachedUsage
+        if (used == null) {
+            Toast.makeText(this, "사용량을 확인하는 중이에요. 잠시 후 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (used >= DAILY_TOKEN_LIMIT) {
+            Toast.makeText(this, "오늘 AI 사용량을 모두 사용했어요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         isSuggesting = true
         btnAiSuggest.isEnabled = false
         btnAiSuggest.text = "생성 중..."
 
-        chatRepo.getTodayUsage { used ->
-            if (used == null || used >= DAILY_TOKEN_LIMIT) {
-                val msg = if (used == null) "사용량을 확인하지 못했어요." else "오늘 AI 사용량을 모두 사용했어요."
-                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                resetAiButton()
-                return@getTodayUsage
-            }
-
-            geminiClient.suggest(
-                ocrText = ocr,
-                onResult = { list, tokens ->
-                    runOnUiThread {
-                        if (list.isEmpty()) {
-                            Toast.makeText(this, "추천을 만들지 못했어요. 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
-                        } else {
-                            shownSuggestions = list
-                            candidateSuggestions = null
-                            candidateCount = 0
-                            applySuggestions(list)
-                            aiHoldUntil = SystemClock.elapsedRealtime() + 30_000   // 30초간 유지
-                            chatRepo.addUsage(tokens)
-                        }
-                        resetAiButton()
+        geminiClient.suggest(
+            ocrText = ocr,
+            onResult = { list, tokens ->
+                runOnUiThread {
+                    if (list.isEmpty()) {
+                        Toast.makeText(this, "추천을 만들지 못했어요. 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        shownSuggestions = list
+                        candidateSuggestions = null
+                        candidateCount = 0
+                        applySuggestions(list)
+                        aiHoldUntil = SystemClock.elapsedRealtime() + 30_000
                     }
-                },
-                onError = { e ->
-                    Log.e("Gemini", "추천 요청 실패", e)
-                    runOnUiThread {
-                        Toast.makeText(this, "추천 중 오류가 발생했어요.", Toast.LENGTH_SHORT).show()
-                        resetAiButton()
-                    }
+                    // 결과가 비어도 토큰은 이미 소모됐으므로 항상 기록
+                    cachedUsage = (cachedUsage ?: 0L) + tokens
+                    chatRepo.addUsage(tokens)
+                    resetAiButton()
                 }
-            )
-        }
+            },
+            onError = { e ->
+                Log.e("Gemini", "추천 요청 실패", e)
+                runOnUiThread {
+                    Toast.makeText(this, "추천 중 오류가 발생했어요.", Toast.LENGTH_SHORT).show()
+                    resetAiButton()
+                }
+            }
+        )
     }
 
     private val permissionLauncher =
