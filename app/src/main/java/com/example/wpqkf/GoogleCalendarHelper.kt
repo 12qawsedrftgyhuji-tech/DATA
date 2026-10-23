@@ -10,7 +10,6 @@ import com.google.android.gms.common.api.Scope
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
-import com.google.api.client.util.DateTime
 import com.google.api.services.calendar.CalendarScopes
 import com.google.api.services.calendar.model.Event
 import com.google.api.services.calendar.model.EventDateTime
@@ -62,9 +61,9 @@ object GoogleCalendarHelper {
         return null
     }
 
-    fun buildEventDateTime(cal: Calendar): Pair<DateTime, String> {
+    fun buildEventDateTime(cal: Calendar): Pair<com.google.api.client.util.DateTime, String> {
         val timeZone = TimeZone.getDefault()
-        val dateTime = DateTime(cal.time, timeZone)
+        val dateTime = com.google.api.client.util.DateTime(cal.time, timeZone)
         return Pair(dateTime, timeZone.id)
     }
 

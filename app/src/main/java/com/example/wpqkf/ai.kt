@@ -1,6 +1,7 @@
 package com.example.wpqkf
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -42,7 +43,17 @@ class ai : AppCompatActivity() {
     private val recordAudioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { _ ->
-        launchScreenCapture()
+        checkAccessibilityAndLaunch()
+    }
+
+    private val accessibilitySettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        if (isAccessibilityServiceEnabled()) {
+            launchScreenCapture()
+        } else {
+            Toast.makeText(this, "접근성 권한이 꺼져 있어 AI 화면 안내를 쓸 수 없어요.", Toast.LENGTH_LONG).show()
+        }
     }
 
     private val screenCaptureLauncher = registerForActivityResult(
@@ -59,6 +70,33 @@ class ai : AppCompatActivity() {
         } else {
             Toast.makeText(this, "화면 캡처 권한이 거부되었습니다.", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val expected = ComponentName(this, ScreenCaptureAccessibilityService::class.java)
+        val enabledServices = Settings.Secure.getString(
+            contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+
+        return enabledServices.split(':').any {
+            ComponentName.unflattenFromString(it) == expected
+        }
+    }
+
+    private fun checkAccessibilityAndLaunch() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || isAccessibilityServiceEnabled()) {
+            launchScreenCapture()
+            return
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("접근성 권한이 필요해요")
+            .setMessage("AI가 지금 화면을 보고 어디를 눌러야 하는지 알려 드리려면, 설정에서 'AI 화면 도우미'를 켜 주세요. 한 번만 켜 두면 다음부터는 묻지 않아요.")
+            .setPositiveButton("설정으로 이동") { _, _ ->
+                accessibilitySettingsLauncher.launch(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            .setNegativeButton("취소", null)
+            .show()
     }
 
     private fun startExternalAiHelper() {
@@ -88,7 +126,7 @@ class ai : AppCompatActivity() {
         ) {
             recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         } else {
-            launchScreenCapture()
+            checkAccessibilityAndLaunch()
         }
     }
 

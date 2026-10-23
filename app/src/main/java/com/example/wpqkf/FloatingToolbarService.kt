@@ -14,11 +14,12 @@ import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
-import android.media.ImageReader
+import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -44,22 +45,32 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.ai.client.generativeai.GenerativeModel
+import com.google.ai.client.generativeai.type.Content
+import com.google.ai.client.generativeai.type.InvalidAPIKeyException
+import com.google.ai.client.generativeai.type.QuotaExceededException
 import com.google.ai.client.generativeai.type.content
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
 class FloatingToolbarService : Service() {
 
     private var mediaProjection: MediaProjection? = null
-    private var virtualDisplayImage: VirtualDisplay? = null
-    private var imageReader: ImageReader? = null
+    private var virtualDisplayRecord: VirtualDisplay? = null
+    private var mediaRecorder: MediaRecorder? = null
 
-    @Volatile
-    private var latestBitmap: Bitmap? = null
+    private var currentTempFile: File? = null
+    private var currentFinalFile: File? = null
 
     private lateinit var windowManager: WindowManager
     private lateinit var floatingView: View
@@ -77,15 +88,20 @@ class FloatingToolbarService : Service() {
     private var tts: TextToSpeech? = null
     private var speechRecognizer: SpeechRecognizer? = null
 
-    // 마이크 UI 상태 관리 (textRecognizer 와 동일)
     private val uiHandler = Handler(Looper.getMainLooper())
     private val micIdleRunnable = Runnable { setMicIdle() }
     private var micRed = false
     private var isListening = false
+    private var isRecording = false
+
+    // 요청 상태 및 한도 차단 관리
+    private var isRequesting = false
+    private var quotaBlockedUntil = 0L
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val visionModel by lazy {
         GenerativeModel(
-            modelName = "gemini-3.8-flash",
+            modelName = "gemini-3.5-flash-lite",
             apiKey = BuildConfig.GEMINI_API_KEY
         )
     }
@@ -169,7 +185,7 @@ class FloatingToolbarService : Service() {
             }, Handler(Looper.getMainLooper()))
 
             initScreenMetrics()
-            setupImageReader()
+            startScreenRecording()
         } else {
             Log.e("FloatingSvc", "projection 데이터 없음: code=$resultCode, data=${resultData != null}")
         }
@@ -196,65 +212,115 @@ class FloatingToolbarService : Service() {
             screenDensity = metrics.densityDpi
         }
 
-        val maxDim = 1280
         if (realWidth > realHeight) {
-            captureHeight = maxDim
-            captureWidth = (realWidth.toFloat() / realHeight * maxDim).toInt()
+            captureWidth = 1280
+            captureHeight = 720
         } else {
-            captureWidth = maxDim
-            captureHeight = (realHeight.toFloat() / realWidth * maxDim).toInt()
+            captureWidth = 720
+            captureHeight = 1280
         }
-
-        if (captureWidth % 2 != 0) captureWidth--
-        if (captureHeight % 2 != 0) captureHeight--
     }
 
-    private fun setupImageReader() {
-        if (virtualDisplayImage != null) return
+    private fun startScreenRecording() {
+        try {
+            val recordDir = File(getExternalFilesDir(Environment.DIRECTORY_MOVIES), "ai_recordings")
+            if (!recordDir.exists()) recordDir.mkdirs()
 
-        imageReader = ImageReader.newInstance(captureWidth, captureHeight, PixelFormat.RGBA_8888, 2)
-        imageReader?.setOnImageAvailableListener({ reader ->
-            val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
-            try {
-                val plane = image.planes[0]
-                val rowPadding = plane.rowStride - plane.pixelStride * captureWidth
-                val temp = Bitmap.createBitmap(
-                    captureWidth + rowPadding / plane.pixelStride,
-                    captureHeight,
-                    Bitmap.Config.ARGB_8888
-                )
-                temp.copyPixelsFromBuffer(plane.buffer)
-                latestBitmap = Bitmap.createBitmap(temp, 0, 0, captureWidth, captureHeight)
-                temp.recycle()
-            } catch (e: Exception) {
-                Log.e("FloatingSvc", "ImageReader 버퍼 변환 실패", e)
-            } finally {
-                image.close()
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+
+            currentTempFile = File(recordDir, "REC_$timeStamp.mp4.tmp")
+            currentFinalFile = File(recordDir, "REC_$timeStamp.mp4")
+
+            mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(this)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }.apply {
+                setVideoSource(MediaRecorder.VideoSource.SURFACE)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+                setVideoEncodingBitRate(2 * 1024 * 1024)
+                setVideoFrameRate(24)
+                setVideoSize(captureWidth, captureHeight)
+                setOutputFile(currentTempFile?.absolutePath)
+                prepare()
             }
-        }, Handler(Looper.getMainLooper()))
 
-        virtualDisplayImage = mediaProjection?.createVirtualDisplay(
-            "ScreenCapture",
-            captureWidth,
-            captureHeight,
-            screenDensity,
-            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            imageReader?.surface,
-            null,
-            null
-        )
+            virtualDisplayRecord = mediaProjection?.createVirtualDisplay(
+                "ScreenRecord",
+                captureWidth,
+                captureHeight,
+                screenDensity,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                mediaRecorder?.surface,
+                null,
+                null
+            )
+
+            mediaRecorder?.start()
+            isRecording = true
+            Log.d("FloatingSvc", "전체 화면 녹화 시작: ${currentTempFile?.absolutePath}")
+
+        } catch (e: Exception) {
+            Log.e("FloatingSvc", "화면 녹화 시작 실패: ${e.message}", e)
+            try { mediaRecorder?.release() } catch (_: Exception) {}
+            mediaRecorder = null
+            try { virtualDisplayRecord?.release() } catch (_: Exception) {}
+            virtualDisplayRecord = null
+            currentTempFile?.delete()
+            currentTempFile = null
+            currentFinalFile = null
+        }
+    }
+
+    private fun stopScreenRecording() {
+        if (!isRecording) return
+
+        try {
+            mediaRecorder?.stop()
+            mediaRecorder?.reset()
+            mediaRecorder?.release()
+            mediaRecorder = null
+            virtualDisplayRecord?.release()
+            virtualDisplayRecord = null
+            isRecording = false
+
+            if (currentTempFile != null && currentFinalFile != null && currentTempFile!!.exists() && currentTempFile!!.length() > 0) {
+                val renamed = currentTempFile!!.renameTo(currentFinalFile!!)
+                Log.d("FloatingSvc", "녹화 파일 변환 완료: 성공=$renamed, 경로=${currentFinalFile!!.absolutePath}, 크기=${currentFinalFile!!.length()}")
+            } else {
+                Log.e("FloatingSvc", "임시 녹화 파일이 존재하지 않거나 0바이트입니다.")
+                currentTempFile?.delete()
+            }
+
+            val recordDir = File(getExternalFilesDir(Environment.DIRECTORY_MOVIES), "ai_recordings")
+            VideoStorageManager(recordDir).checkAndCleanStorage()
+
+        } catch (e: Exception) {
+            Log.e("FloatingSvc", "녹화 중지 처리 예외", e)
+            currentTempFile?.delete()
+        } finally {
+            currentTempFile = null
+            currentFinalFile = null
+        }
     }
 
     fun captureCurrentScreen(onCaptured: (Bitmap?) -> Unit) {
-        val currentBitmap = latestBitmap
-        if (currentBitmap != null && !currentBitmap.isRecycled) {
-            onCaptured(currentBitmap.copy(Bitmap.Config.ARGB_8888, false))
+        val svc = ScreenCaptureAccessibilityService.instance
+        if (svc != null) {
+            floatingView.visibility = View.INVISIBLE
+            uiHandler.postDelayed({
+                svc.captureScreen { bmp ->
+                    floatingView.visibility = View.VISIBLE
+                    onCaptured(bmp)
+                }
+            }, 150)
         } else {
             onCaptured(null)
         }
     }
 
-    // 마이크 상태별 버튼 배경 색상 제어 (기본/파랑/빨강)
     private fun setMicOn() {
         uiHandler.removeCallbacks(micIdleRunnable)
         micRed = false
@@ -441,27 +507,73 @@ class FloatingToolbarService : Service() {
         }
     }
 
-    private fun sendQuestionToAi(userPrompt: String) {
-        val prompt = if (userPrompt.isNotBlank()) userPrompt else "현재 화면을 설명해주고 내가 어디를 눌러야 할지 알려주세요."
-        Log.d("FloatingSvc", "전송 클릭: '$prompt', projection=${mediaProjection != null}, bitmap=${latestBitmap != null}")
+    private fun finishRequest() {
+        isRequesting = false
+        btnSend.isEnabled = true
+        btnSend.alpha = 1f
+    }
 
+    private fun sendQuestionToAi(userPrompt: String) {
+        Log.d("FloatingSvc", "전송 클릭: '$userPrompt', 접근성 instance=${ScreenCaptureAccessibilityService.instance}")
+
+        // 1) 이미 요청 중이면 중복 요청 방지
+        if (isRequesting) {
+            tvAiResponse.text = "AI가 아직 답변을 준비하고 있어요. 잠시만 기다려 주세요."
+            return
+        }
+
+        // 2) 한도 초과 직후 30분 동안 차단
+        if (System.currentTimeMillis() < quotaBlockedUntil) {
+            tvAiResponse.text = "오늘 AI 사용량을 모두 썼어요. 나중에 다시 이용해 주세요."
+            return
+        }
+
+        val prompt = if (userPrompt.isNotBlank()) userPrompt else "현재 화면을 설명해주고 내가 어디를 눌러야 할지 알려주세요."
+
+        isRequesting = true
+        btnSend.isEnabled = false
+        btnSend.alpha = 0.4f
         tvAiResponse.text = "AI가 화면을 분석하는 중입니다..."
+
+        if (ScreenCaptureAccessibilityService.instance == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            tvAiResponse.text = "화면 도우미 연결이 끊겼어요. 설정 → 접근성에서 'AI 화면 도우미'를 껐다가 다시 켜 주세요."
+            finishRequest()
+            return
+        }
 
         captureCurrentScreen { bitmap ->
             if (bitmap != null) {
                 analyzeScreenWithAi(bitmap, prompt)
             } else {
                 Log.e("FloatingSvc", "화면 캡처 비트맵이 null임")
-                tvAiResponse.text = "화면 분석 준비 중입니다. 잠시 후 다시 전송을 눌러주세요."
-                Toast.makeText(this, "화면을 분석할 준비가 되지 않았습니다. (잠시 후 시도)", Toast.LENGTH_SHORT).show()
+                tvAiResponse.text = "화면을 가져오지 못했어요. 잠시 후 다시 눌러 주세요."
+                finishRequest()
             }
         }
     }
 
-    private fun analyzeScreenWithAi(bitmap: Bitmap, userPrompt: String) {
-        Toast.makeText(this, "AI가 화면을 분석 중입니다...", Toast.LENGTH_SHORT).show()
+    private suspend fun generateWithRetry(inputContent: Content, maxAttempts: Int = 2): String? {
+        var lastError: Exception? = null
+        for (attempt in 1..maxAttempts) {
+            try {
+                return visionModel.generateContent(inputContent).text
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: QuotaExceededException) {
+                throw e
+            } catch (e: InvalidAPIKeyException) {
+                throw e
+            } catch (e: Exception) {
+                lastError = e
+                Log.e("FloatingSvc", "Gemini 호출 실패 ($attempt/$maxAttempts)", e)
+                if (attempt < maxAttempts) delay(2000L)
+            }
+        }
+        throw lastError ?: IllegalStateException("알 수 없는 오류")
+    }
 
-        CoroutineScope(Dispatchers.IO).launch {
+    private fun analyzeScreenWithAi(bitmap: Bitmap, userPrompt: String) {
+        serviceScope.launch {
             try {
                 val inputContent = content {
                     image(bitmap)
@@ -472,21 +584,33 @@ class FloatingToolbarService : Service() {
                     )
                 }
 
-                val response = visionModel.generateContent(inputContent)
-                val aiResponseText = response.text ?: "답변을 가져오지 못했습니다."
+                val answer = generateWithRetry(inputContent) ?: "답변을 가져오지 못했어요. 다시 한 번 눌러 주세요."
 
                 withContext(Dispatchers.Main) {
-                    tvAiResponse.text = aiResponseText
-                    Toast.makeText(this@FloatingToolbarService, aiResponseText, Toast.LENGTH_LONG).show()
-                    tts?.speak(aiResponseText, TextToSpeech.QUEUE_FLUSH, null, null)
+                    tvAiResponse.text = answer
+                    tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, null)
                     bitmap.recycle()
+                    finishRequest()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Log.e("FloatingSvc", "Gemini 호출 실패", e)
+                Log.e("FloatingSvc", "Gemini 최종 호출 실패", e)
+
+                if (e is QuotaExceededException) {
+                    quotaBlockedUntil = System.currentTimeMillis() + 30 * 60 * 1000L
+                }
+
+                val msg = when (e) {
+                    is QuotaExceededException -> "오늘 AI 사용량을 모두 썼어요. 나중에 다시 이용해 주세요."
+                    is InvalidAPIKeyException -> "AI 설정에 문제가 있어요. 앱 관리자에게 알려 주세요."
+                    else -> "지금 AI가 많이 바빠요. 잠시 후에 다시 눌러 주세요."
+                }
+
                 withContext(Dispatchers.Main) {
-                    tvAiResponse.text = "오류 발생: ${e.message}"
-                    Toast.makeText(this@FloatingToolbarService, "오류 발생: ${e.message}", Toast.LENGTH_SHORT).show()
+                    tvAiResponse.text = msg
                     bitmap.recycle()
+                    finishRequest()
                 }
             }
         }
@@ -542,6 +666,8 @@ class FloatingToolbarService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceScope.cancel()
+        stopScreenRecording()
         uiHandler.removeCallbacks(micIdleRunnable)
         tts?.stop()
         tts?.shutdown()
@@ -549,8 +675,7 @@ class FloatingToolbarService : Service() {
         if (::floatingView.isInitialized && floatingView.isAttachedToWindow) {
             windowManager.removeView(floatingView)
         }
-        virtualDisplayImage?.release()
-        imageReader?.close()
+        virtualDisplayRecord?.release()
         mediaProjection?.stop()
     }
 }

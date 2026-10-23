@@ -3,48 +3,76 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
+    android:layout_margin="6dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="4dp">
+    app:cardElevation="3dp">
 
     <LinearLayout
         android:id="@+id/layoutItem"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="20dp"
+        android:background="?android:attr/selectableItemBackground"
         android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground">
+        android:orientation="horizontal"
+        android:padding="12dp">
 
+        <!-- 비디오 썸네일 이미지 -->
         <ImageView
-            android:id="@+id/ivAppIcon"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:src="@mipmap/ic_launcher" />
+            android:id="@+id/ivVideoIcon"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="#DDDDDD"
+            android:contentDescription="비디오 썸네일"
+            android:scaleType="centerCrop"
+            android:src="@android:drawable/ic_media_play" />
 
+        <!-- 영상 정보 (파일명/일시, 재생 시간 및 용량) -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
             android:layout_weight="1"
-            android:layout_marginStart="16dp"
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/tvAppName"
+                android:id="@+id/tvVideoName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="앱 이름"
-                android:textColor="#000000"
-                android:textSize="20sp"
+                android:text="2026년 05월 22일 녹화"
+                android:textColor="#111111"
+                android:textSize="15sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/tvUsageTime"
+                android:id="@+id/tvVideoSize"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0분 사용함"
-                android:textColor="#555555"
-                android:textSize="14sp" />
+                android:layout_marginTop="4dp"
+                android:text="0분 00초 · 0 MB"
+                android:textColor="#666666"
+                android:textSize="13sp" />
         </LinearLayout>
+
+        <!-- 재생 버튼 -->
+        <ImageButton
+            android:id="@+id/btnPlayVideo"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="재생"
+            android:src="@android:drawable/ic_media_play"
+            app:tint="#2196F3" />
+
+        <!-- 삭제 버튼 -->
+        <ImageButton
+            android:id="@+id/btnDeleteVideo"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="삭제"
+            android:src="@android:drawable/ic_menu_delete"
+            app:tint="#FF5252" />
+
     </LinearLayout>
 </androidx.cardview.widget.CardView>

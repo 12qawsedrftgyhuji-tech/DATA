@@ -1,54 +1,110 @@
 package com.example.wpqkf
 
-import android.app.AlertDialog
-import android.app.AppOpsManager
-import android.app.usage.UsageEvents
-import android.app.usage.UsageStatsManager
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
+import android.media.ThumbnailUtils
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Log
+import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-// 어댑터와 다이얼로그가 같이 쓰는 시간 포맷 함수 (중복 제거)
-private fun formatUsageTime(totalTime: Long): String {
-    val seconds = totalTime / 1000
-    val minutes = seconds / 60
-    val remainingSeconds = seconds % 60
-    return if (minutes > 0) "${minutes}분 ${remainingSeconds}초" else "${remainingSeconds}초"
+data class VideoRecordItem(
+    val file: File,
+    val formattedName: String,
+    val sizeText: String,
+    val sizeInBytes: Long,
+    val recordedAt: Long,
+    val durationText: String,
+    val thumbnail: Bitmap?
+)
+
+class VideoRecordAdapter(
+    private val onPlayClick: (VideoRecordItem) -> Unit,
+    private val onDeleteClick: (VideoRecordItem) -> Unit
+) : ListAdapter<VideoRecordItem, VideoRecordAdapter.ViewHolder>(DIFF) {
+
+    companion object {
+        private val DIFF = object : DiffUtil.ItemCallback<VideoRecordItem>() {
+            override fun areItemsTheSame(a: VideoRecordItem, b: VideoRecordItem): Boolean =
+                a.file.absolutePath == b.file.absolutePath
+
+            override fun areContentsTheSame(a: VideoRecordItem, b: VideoRecordItem): Boolean =
+                a.recordedAt == b.recordedAt && a.sizeInBytes == b.sizeInBytes && a.durationText == b.durationText
+        }
+    }
+
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val ivVideoIcon: ImageView = view.findViewById(R.id.ivVideoIcon)
+        val tvVideoName: TextView = view.findViewById(R.id.tvVideoName)
+        val tvVideoSize: TextView = view.findViewById(R.id.tvVideoSize)
+        val btnPlayVideo: ImageButton = view.findViewById(R.id.btnPlayVideo)
+        val btnDeleteVideo: ImageButton = view.findViewById(R.id.btnDeleteVideo)
+        val layoutItem: View = view.findViewById(R.id.layoutItem)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_record, parent, false)
+        return ViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val item = getItem(position)
+        holder.tvVideoName.text = item.formattedName
+        holder.tvVideoSize.text = "${item.durationText} · ${item.sizeText}"
+
+        if (item.thumbnail != null) {
+            holder.ivVideoIcon.setImageBitmap(item.thumbnail)
+        } else {
+            holder.ivVideoIcon.setImageResource(android.R.drawable.ic_media_play)
+        }
+
+        holder.layoutItem.setOnClickListener { onPlayClick(item) }
+        holder.btnPlayVideo.setOnClickListener { onPlayClick(item) }
+        holder.btnDeleteVideo.setOnClickListener { onDeleteClick(item) }
+    }
 }
 
 class record : AppCompatActivity() {
+
     private lateinit var mBtnSchedule2: ImageButton
     private lateinit var mBtnRecord2: ImageButton
     private lateinit var mBtnHome2: ImageButton
     private lateinit var mBtnAi2: ImageButton
     private lateinit var mBtnProfile2: ImageButton
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var adapter: RecordAdapter
 
-    // Firebase 대신 온디바이스 Room 데이터베이스 사용
-    private lateinit var db: AppDatabase
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var tvStorageUsage: TextView
+    private lateinit var tvEmpty: TextView
+    private lateinit var adapter: VideoRecordAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,262 +117,181 @@ class record : AppCompatActivity() {
             insets
         }
 
-        db = AppDatabase.getInstance(this)
-
+        tvStorageUsage = findViewById(R.id.tvStorageUsage)
+        tvEmpty = findViewById(R.id.tvEmpty)
         recyclerView = findViewById(R.id.recyclerViewRecord)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // 클릭하면 바로 앱을 실행하는 대신, 상세 다이얼로그(사용시간/바로가기/메모)를 띄움
-        adapter = RecordAdapter(emptyList(), packageManager) { record ->
-            showAppDetailDialog(record)
-        }
+        adapter = VideoRecordAdapter(
+            onPlayClick = { item -> playVideo(item.file) },
+            onDeleteClick = { item -> confirmDeleteVideo(item) }
+        )
         recyclerView.adapter = adapter
 
-        // Room의 LiveData를 관찰 → DB 내용이 바뀔 때마다 자동으로 화면 갱신
-        db.usageRecordDao().getTopRecords().observe(this) { records ->
-            adapter.updateData(records)
-        }
-
-        setupButtons()
+        setupNavigationButtons()
     }
 
     override fun onResume() {
         super.onResume()
-        // 화면에 다시 들어올 때마다 자동으로 최신 사용 기록을 분석해서 저장
-        if (!hasUsageStatsPermission()) {
-            Toast.makeText(this, "사용 기록 접근 권한이 필요합니다.", Toast.LENGTH_LONG).show()
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-        } else {
-            refreshData()
-        }
+        loadRecordings()
     }
 
-    private fun refreshData() {
-        val endTime = System.currentTimeMillis()
-        val startTime = endTime - (24 * 60 * 60 * 1000) // 24시간 전
-
+    private fun loadRecordings() {
         lifecycleScope.launch {
-            saveUsageStatsToDb(startTime, endTime)
-        }
-    }
+            val (items, totalBytes) = withContext(Dispatchers.IO) {
+                val recordDir = File(getExternalFilesDir(Environment.DIRECTORY_MOVIES), "ai_recordings")
+                if (!recordDir.exists()) recordDir.mkdirs()
 
-    private fun hasUsageStatsPermission(): Boolean {
-        val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
-
-    /**
-     * 해당 패키지가 런처에서 실행 가능한 "진짜 앱"인지 확인
-     * (시스템 서비스, 백그라운드 프로세스 등을 걸러냄)
-     */
-    private fun isLaunchableApp(packageName: String): Boolean {
-        return packageManager.getLaunchIntentForPackage(packageName) != null
-    }
-
-    /**
-     * queryEvents를 사용하여 정밀하게 사용 시간을 계산하고 온디바이스 Room DB에 저장하는 함수
-     */
-    private suspend fun saveUsageStatsToDb(startTime: Long, endTime: Long) {
-        val records = withContext(Dispatchers.IO) {
-            val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-            val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
-            val event = UsageEvents.Event()
-
-            val activeApps = mutableMapOf<String, Long>()
-            val usageMap = mutableMapOf<String, Long>()
-
-            while (usageEvents.hasNextEvent()) {
-                usageEvents.getNextEvent(event)
-                val pName = event.packageName
-
-                if (pName == packageName || pName.contains("launcher") || pName.contains("trebuchet")) continue
-
-                when (event.eventType) {
-                    UsageEvents.Event.ACTIVITY_RESUMED -> {
-                        activeApps[pName] = event.timeStamp
-                    }
-                    UsageEvents.Event.ACTIVITY_PAUSED -> {
-                        val start = activeApps.remove(pName)
-                        if (start != null) {
-                            val duration = event.timeStamp - start
-                            if (duration > 0) {
-                                usageMap[pName] = (usageMap[pName] ?: 0L) + duration
-                            }
-                        }
-                    }
+                val allFiles = recordDir.listFiles()
+                Log.d("RecordTab", "경로: ${recordDir.absolutePath}, 존재=${recordDir.exists()}")
+                Log.d("RecordTab", "전체 파일 수=${allFiles?.size}")
+                allFiles?.forEach {
+                    Log.d("RecordTab", "파일: ${it.name}, 크기=${it.length()}, 확장자=${it.extension}")
                 }
+
+                val videoFiles = recordDir.listFiles { file ->
+                    file.isFile && file.extension.equals("mp4", ignoreCase = true) && file.length() > 0
+                }?.sortedByDescending { parseRecordTime(it) } ?: emptyList()
+
+                var bytesSum = 0L
+                val list = videoFiles.map { file ->
+                    val bytes = file.length()
+                    bytesSum += bytes
+
+                    val recordedAt = parseRecordTime(file)
+                    val formattedName = formatFileName(recordedAt)
+                    val sizeText = formatFileSize(bytes)
+                    val durationText = readDuration(file)
+                    val thumbnail = readThumbnail(file)
+
+                    VideoRecordItem(file, formattedName, sizeText, bytes, recordedAt, durationText, thumbnail)
+                }
+
+                list to bytesSum
             }
 
-            val filteredEntries = usageMap.entries.filter { entry ->
-                entry.value > 5000 && isLaunchableApp(entry.key)
-            }
+            Log.d("RecordTab", "표시할 최종 항목 수=${items.size}")
 
-            val now = System.currentTimeMillis()
-            filteredEntries.map { entry ->
-                UsageRecord(
-                    packageName = entry.key,
-                    appName = getAppNameFromPackage(entry.key),
-                    totalTime = entry.value,
-                    lastTimeUsed = now
-                )
-            }
-        }
+            val limitGb = VideoStorageManager.MAX_STORAGE_BYTES / (1024.0 * 1024.0 * 1024.0)
+            val totalMb = totalBytes / (1024.0 * 1024.0)
 
-        db.usageRecordDao().clearAll()
-        if (records.isNotEmpty()) {
-            db.usageRecordDao().insertAll(records)
+            tvStorageUsage.text = String.format(
+                Locale.getDefault(),
+                "저장 용량: %.1f MB / %.0f GB (초과 시 오래된 영상부터 자동 삭제)",
+                totalMb, limitGb
+            )
+
+            tvEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+            recyclerView.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
+
+            adapter.submitList(items)
         }
     }
 
-    private fun getAppNameFromPackage(packageName: String): String {
+    private fun parseRecordTime(file: File): Long {
+        val raw = file.nameWithoutExtension.removePrefix("REC_")
         return try {
-            val info = packageManager.getApplicationInfo(packageName, 0)
-            packageManager.getApplicationLabel(info).toString()
+            SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).parse(raw)?.time
+                ?: file.lastModified()
         } catch (e: Exception) {
-            packageName
+            file.lastModified()
         }
     }
 
-    private fun launchApp(packageName: String) {
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-        if (intent != null) {
-            startActivity(intent)
+    private fun formatFileName(timeMillis: Long): String {
+        val sdf = SimpleDateFormat("yyyy년 MM월 dd일 HH시 mm분 녹화", Locale.KOREA)
+        return sdf.format(Date(timeMillis))
+    }
+
+    private fun formatFileSize(bytes: Long): String {
+        val mb = bytes.toDouble() / (1024 * 1024)
+        return if (mb >= 1.0) {
+            String.format(Locale.getDefault(), "%.1f MB", mb)
         } else {
-            Toast.makeText(this, "앱을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show()
+            val kb = bytes.toDouble() / 1024
+            String.format(Locale.getDefault(), "%.1f KB", kb)
         }
     }
 
-    /**
-     * 리스트 아이템 클릭 시 뜨는 상세 다이얼로그
-     * 1칸: 사용 시간 / 2칸: 바로가기 / 3칸: 메모, 맨 위엔 앱 아이콘+이름
-     */
-    private fun showAppDetailDialog(record: UsageRecord) {
-        val pName = record.packageName
+    private fun readDuration(file: File): String {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(file.absolutePath)
+            val ms = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+            val sec = ms / 1000
+            String.format(Locale.getDefault(), "%d분 %02d초", sec / 60, sec % 60)
+        } catch (e: Exception) {
+            "-"
+        } finally {
+            try {
+                retriever.release()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
-        val view = LayoutInflater.from(this).inflate(R.layout.dialog_app_detail, null)
-
-
-        val ivIcon = view.findViewById<ImageView>(R.id.ivDialogAppIcon)
-        val tvName = view.findViewById<TextView>(R.id.tvDialogAppName)
-        val tvUsage = view.findViewById<TextView>(R.id.tvDialogUsageTime)
-        val btnShortcut = view.findViewById<Button>(R.id.btnDialogShortcut)
-        val etMemo = view.findViewById<EditText>(R.id.etDialogMemo)
-        val btnSaveMemo = view.findViewById<Button>(R.id.btnDialogSaveMemo)
-
-        // 맨 위: 아이콘 + 이름
-        val icon: Drawable? = try {
-            packageManager.getApplicationIcon(pName)
-        } catch (e: PackageManager.NameNotFoundException) {
+    private fun readThumbnail(file: File): Bitmap? {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ThumbnailUtils.createVideoThumbnail(file, Size(160, 160), null)
+            } else {
+                @Suppress("DEPRECATION")
+                ThumbnailUtils.createVideoThumbnail(file.absolutePath, MediaStore.Images.Thumbnails.MINI_KIND)
+            }
+        } catch (e: Exception) {
             null
         }
-        ivIcon.setImageDrawable(icon ?: getDrawable(android.R.drawable.sym_def_app_icon))
-        tvName.text = record.appName
-
-        // 1칸: 사용 시간
-        tvUsage.text = "오늘 사용 시간: ${formatUsageTime(record.totalTime)}"
-
-        val dialog = AlertDialog.Builder(this)
-            .setView(view)
-            .setNegativeButton("닫기", null)
-            .create()
-
-        // 2칸: 바로가기
-        btnShortcut.setOnClickListener {
-            launchApp(pName)
-            dialog.dismiss()
-        }
-
-        // 3칸: 메모 - 기존 메모 불러오기
-        lifecycleScope.launch {
-            val existing = db.appMemoDao().getMemo(pName)
-            etMemo.setText(existing?.memo ?: "")
-        }
-
-        btnSaveMemo.setOnClickListener {
-            val text = etMemo.text.toString()
-            lifecycleScope.launch {
-                db.appMemoDao().saveMemo(AppMemo(packageName = pName, memo = text))
-                Toast.makeText(this@record, "메모가 저장되었습니다.", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        dialog.show()
     }
 
-    private fun setupButtons() {
+    private fun playVideo(file: File) {
+        try {
+            val uri: Uri = FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                file
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "video/*")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "영상을 재생할 수 없습니다: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun confirmDeleteVideo(item: VideoRecordItem) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("영상 삭제")
+            .setMessage("선택한 녹화 영상을 삭제하시겠습니까?")
+            .setPositiveButton("삭제") { _, _ ->
+                if (item.file.delete()) {
+                    Toast.makeText(this, "영상이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
+                    loadRecordings()
+                } else {
+                    Toast.makeText(this, "삭제에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("취소", null)
+            .show()
+    }
+
+    private fun navigateTo(target: Class<*>) {
+        startActivity(Intent(this, target).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        finish()
+    }
+
+    private fun setupNavigationButtons() {
         mBtnSchedule2 = findViewById(R.id.schedule)
         mBtnRecord2 = findViewById(R.id.record)
         mBtnHome2 = findViewById(R.id.home)
         mBtnAi2 = findViewById(R.id.ai)
         mBtnProfile2 = findViewById(R.id.profile)
 
-        mBtnHome2.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)); finish() }
-        mBtnSchedule2.setOnClickListener { startActivity(Intent(this, schedule::class.java)); finish() }
-        mBtnAi2.setOnClickListener { startActivity(Intent(this, ai::class.java)); finish() }
-        mBtnProfile2.setOnClickListener { startActivity(Intent(this, profile::class.java)); finish() }
-
-        mBtnRecord2.setOnClickListener {
-            refreshData()
-        }
+        mBtnHome2.setOnClickListener { navigateTo(MainActivity::class.java) }
+        mBtnSchedule2.setOnClickListener { navigateTo(schedule::class.java) }
+        mBtnAi2.setOnClickListener { navigateTo(ai::class.java) }
+        mBtnProfile2.setOnClickListener { navigateTo(profile::class.java) }
     }
-}
-
-// 클릭 콜백을 packageName(String) 대신 UsageRecord 전체로 넘김
-// -> 다이얼로그에서 앱 이름/사용시간을 다시 조회할 필요 없이 그대로 사용
-class RecordAdapter(
-    private var records: List<UsageRecord>,
-    private val packageManager: PackageManager,
-    private val onClick: (UsageRecord) -> Unit
-) : RecyclerView.Adapter<RecordAdapter.ViewHolder>() {
-
-    fun updateData(newRecords: List<UsageRecord>) {
-        records = newRecords
-        notifyDataSetChanged()
-    }
-
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val layout: View = view.findViewById(R.id.layoutItem)
-        val tvName: TextView = view.findViewById(R.id.tvAppName)
-        val tvTime: TextView = view.findViewById(R.id.tvUsageTime)
-        val ivIcon: ImageView = view.findViewById(R.id.ivAppIcon)
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_record, parent, false)
-        return ViewHolder(view)
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val data = records[position]
-        val pName = data.packageName
-
-        holder.tvName.text = data.appName
-
-        val timeAgo = android.text.format.DateUtils.getRelativeTimeSpanString(
-            data.lastTimeUsed,
-            System.currentTimeMillis(),
-            android.text.format.DateUtils.MINUTE_IN_MILLIS
-        )
-
-        holder.tvTime.text = "${formatUsageTime(data.totalTime)} 사용함 • $timeAgo"
-
-        val icon: Drawable? = try {
-            packageManager.getApplicationIcon(pName)
-        } catch (e: PackageManager.NameNotFoundException) {
-            null
-        }
-
-        if (icon != null) {
-            holder.ivIcon.setImageDrawable(icon)
-        } else {
-            holder.ivIcon.setImageResource(android.R.drawable.sym_def_app_icon)
-        }
-
-        holder.layout.setOnClickListener {
-            onClick(data) // UsageRecord 전체를 넘김
-        }
-    }
-
-    override fun getItemCount() = records.size
 }

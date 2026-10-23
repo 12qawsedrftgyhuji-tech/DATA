@@ -3,19 +3,26 @@ package com.example.wpqkf
 import java.io.File
 
 class VideoStorageManager(private val storageDir: File) {
-    // 10 Gigabytes in Bytes
-    private val maxStorageBytes: Long = 10L * 1024L * 1024L * 1024L
+
+    companion object {
+        // 10 Gigabytes in Bytes (한 곳에서 일관되게 관리)
+        const val MAX_STORAGE_BYTES = 10L * 1024L * 1024L * 1024L
+    }
 
     /**
-     * 저장소 용량을 확인하고 10GB를 초과하면 가장 오래된 파일부터 삭제합니다.
+     * 저장소 용량을 확인하고 10GB를 초과하면 가장 오래된 파일부터 순차적으로 삭제함.
      */
     fun checkAndCleanStorage() {
         if (!storageDir.exists()) storageDir.mkdirs()
 
-        val files = storageDir.listFiles() ?: return
+        // 손상되거나 녹화 중인 .tmp 파일이 아닌 유효한 .mp4 파일만 대상으로 지정함.
+        val files = storageDir.listFiles { f ->
+            f.isFile && f.extension.equals("mp4", true)
+        } ?: return
+
         var currentTotalSize = files.sumOf { it.length() }
 
-        if (currentTotalSize > maxStorageBytes) {
+        if (currentTotalSize > MAX_STORAGE_BYTES) {
             // 가장 오래된 파일 순서대로 정렬 (lastModified 기준)
             val sortedFiles = files.sortedBy { it.lastModified() }
 
@@ -23,8 +30,8 @@ class VideoStorageManager(private val storageDir: File) {
                 val fileSize = file.length()
                 if (file.delete()) {
                     currentTotalSize -= fileSize
-                    // 10GB 이하(안전 마진 90%)로 내려오면 삭제 중단
-                    if (currentTotalSize <= maxStorageBytes * 0.9) {
+                    // 10GB 이하(안전 마진 90%)로 내려오면 삭제 중단함.
+                    if (currentTotalSize <= (MAX_STORAGE_BYTES * 0.9).toLong()) {
                         break
                     }
                 }
