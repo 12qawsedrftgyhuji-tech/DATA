@@ -51,6 +51,17 @@
                 android:text="0분 00초 · 0 MB"
                 android:textColor="#666666"
                 android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvVideoMemo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:text="메모 작성하기..."
+                android:textColor="#1A73E8"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <!-- 재생 버튼 -->

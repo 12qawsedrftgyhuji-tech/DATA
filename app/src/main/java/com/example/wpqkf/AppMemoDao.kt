@@ -15,4 +15,8 @@ interface AppMemoDao {
     // 특정 앱의 메모 가져오기 (없으면 null)
     @Query("SELECT * FROM app_memo WHERE packageName = :packageName LIMIT 1")
     suspend fun getMemo(packageName: String): AppMemo?
+
+    // 메모 삭제
+    @Query("DELETE FROM app_memo WHERE packageName = :packageName")
+    suspend fun deleteMemo(packageName: String)
 }

@@ -2,6 +2,7 @@ package com.example.wpqkf
 
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.media.MediaMetadataRetriever
 import android.media.ThumbnailUtils
 import android.net.Uri
@@ -14,12 +15,15 @@ import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -44,10 +48,12 @@ data class VideoRecordItem(
     val sizeInBytes: Long,
     val recordedAt: Long,
     val durationText: String,
-    val thumbnail: Bitmap?
+    val thumbnail: Bitmap?,
+    val memo: String = ""
 )
 
 class VideoRecordAdapter(
+    private val onItemClick: (VideoRecordItem) -> Unit,
     private val onPlayClick: (VideoRecordItem) -> Unit,
     private val onDeleteClick: (VideoRecordItem) -> Unit
 ) : ListAdapter<VideoRecordItem, VideoRecordAdapter.ViewHolder>(DIFF) {
@@ -58,7 +64,8 @@ class VideoRecordAdapter(
                 a.file.absolutePath == b.file.absolutePath
 
             override fun areContentsTheSame(a: VideoRecordItem, b: VideoRecordItem): Boolean =
-                a.recordedAt == b.recordedAt && a.sizeInBytes == b.sizeInBytes && a.durationText == b.durationText
+                a.recordedAt == b.recordedAt && a.sizeInBytes == b.sizeInBytes &&
+                        a.durationText == b.durationText && a.memo == b.memo
         }
     }
 
@@ -66,6 +73,7 @@ class VideoRecordAdapter(
         val ivVideoIcon: ImageView = view.findViewById(R.id.ivVideoIcon)
         val tvVideoName: TextView = view.findViewById(R.id.tvVideoName)
         val tvVideoSize: TextView = view.findViewById(R.id.tvVideoSize)
+        val tvVideoMemo: TextView = view.findViewById(R.id.tvVideoMemo)
         val btnPlayVideo: ImageButton = view.findViewById(R.id.btnPlayVideo)
         val btnDeleteVideo: ImageButton = view.findViewById(R.id.btnDeleteVideo)
         val layoutItem: View = view.findViewById(R.id.layoutItem)
@@ -81,13 +89,21 @@ class VideoRecordAdapter(
         holder.tvVideoName.text = item.formattedName
         holder.tvVideoSize.text = "${item.durationText} · ${item.sizeText}"
 
+        if (item.memo.isNotBlank()) {
+            holder.tvVideoMemo.text = item.memo
+            holder.tvVideoMemo.setTextColor(Color.parseColor("#1A73E8"))
+        } else {
+            holder.tvVideoMemo.text = "메모 작성하기..."
+            holder.tvVideoMemo.setTextColor(Color.parseColor("#888888"))
+        }
+
         if (item.thumbnail != null) {
             holder.ivVideoIcon.setImageBitmap(item.thumbnail)
         } else {
             holder.ivVideoIcon.setImageResource(android.R.drawable.ic_media_play)
         }
 
-        holder.layoutItem.setOnClickListener { onPlayClick(item) }
+        holder.layoutItem.setOnClickListener { onItemClick(item) }
         holder.btnPlayVideo.setOnClickListener { onPlayClick(item) }
         holder.btnDeleteVideo.setOnClickListener { onDeleteClick(item) }
     }
@@ -123,6 +139,7 @@ class record : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         adapter = VideoRecordAdapter(
+            onItemClick = { item -> showMemoDialog(item) },
             onPlayClick = { item -> playVideo(item.file) },
             onDeleteClick = { item -> confirmDeleteVideo(item) }
         )
@@ -139,6 +156,7 @@ class record : AppCompatActivity() {
     private fun loadRecordings() {
         lifecycleScope.launch {
             val (items, totalBytes) = withContext(Dispatchers.IO) {
+                val memoDao = AppDatabase.getInstance(applicationContext).appMemoDao()
                 val recordDir = File(getExternalFilesDir(Environment.DIRECTORY_MOVIES), "ai_recordings")
                 if (!recordDir.exists()) recordDir.mkdirs()
 
@@ -163,8 +181,9 @@ class record : AppCompatActivity() {
                     val sizeText = formatFileSize(bytes)
                     val durationText = readDuration(file)
                     val thumbnail = readThumbnail(file)
+                    val memoText = memoDao.getMemo(file.name)?.memo ?: ""
 
-                    VideoRecordItem(file, formattedName, sizeText, bytes, recordedAt, durationText, thumbnail)
+                    VideoRecordItem(file, formattedName, sizeText, bytes, recordedAt, durationText, thumbnail, memoText)
                 }
 
                 list to bytesSum
@@ -266,15 +285,73 @@ class record : AppCompatActivity() {
             .setTitle("영상 삭제")
             .setMessage("선택한 녹화 영상을 삭제하시겠습니까?")
             .setPositiveButton("삭제") { _, _ ->
-                if (item.file.delete()) {
-                    Toast.makeText(this, "영상이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
-                    loadRecordings()
-                } else {
-                    Toast.makeText(this, "삭제에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    val deleted = withContext(Dispatchers.IO) {
+                        AppDatabase.getInstance(applicationContext).appMemoDao().deleteMemo(item.file.name)
+                        item.file.delete()
+                    }
+                    if (deleted) {
+                        Toast.makeText(this@record, "영상이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
+                        loadRecordings()
+                    } else {
+                        Toast.makeText(this@record, "삭제에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
             .setNegativeButton("취소", null)
             .show()
+    }
+
+    private fun showMemoDialog(item: VideoRecordItem) {
+        val editText = EditText(this).apply {
+            hint = "이 녹화 기록에 대한 메모를 입력하세요."
+            setText(item.memo)
+            if (item.memo.isNotEmpty()) {
+                setSelection(item.memo.length)
+            }
+            minLines = 5
+            maxLines = 10
+            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            background = ContextCompat.getDrawable(this@record, android.R.drawable.editbox_background)
+            setPadding(32, 32, 32, 32)
+        }
+
+        val container = FrameLayout(this).apply {
+            setPadding(48, 24, 48, 0)
+            addView(editText)
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("메모장 - ${item.formattedName}")
+            .setView(container)
+            .setPositiveButton("저장") { _, _ ->
+                val newMemo = editText.text.toString().trim()
+                saveMemoForItem(item.file.name, newMemo)
+            }
+            .setNegativeButton("취소", null)
+            .apply {
+                if (item.memo.isNotEmpty()) {
+                    setNeutralButton("메모 삭제") { _, _ ->
+                        saveMemoForItem(item.file.name, "")
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun saveMemoForItem(fileName: String, memoText: String) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val dao = AppDatabase.getInstance(applicationContext).appMemoDao()
+                if (memoText.isEmpty()) {
+                    dao.deleteMemo(fileName)
+                } else {
+                    dao.saveMemo(AppMemo(packageName = fileName, memo = memoText))
+                }
+            }
+            Toast.makeText(this@record, if (memoText.isEmpty()) "메모가 삭제되었습니다." else "메모가 저장되었습니다.", Toast.LENGTH_SHORT).show()
+            loadRecordings()
+        }
     }
 
     private fun navigateTo(target: Class<*>) {

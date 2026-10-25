@@ -75,9 +75,6 @@
             android:name=".schedule"
             android:exported="false" />
         <activity
-            android:name=".toolbar_border"
-            android:exported="false" />
-        <activity
             android:name=".user"
             android:exported="false" />
         <activity
