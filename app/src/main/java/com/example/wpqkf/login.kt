@@ -313,33 +313,12 @@ class login : AppCompatActivity() {
 
                 Log.d(TAG, "카카오 사용자 정보: ID=$kakaoUserId, 이메일=$email, 닉네임=$nickname")
 
-                val account = UserAccount()
-                account.idToken = "kakao_$kakaoUserId"
-                account.emailId = email
-                account.name = nickname
-
-                mDatabaseRef.child("UserAccount").child("kakao_$kakaoUserId")
-                    .addListenerForSingleValueEvent(object : com.google.firebase.database.ValueEventListener {
-                        override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
-                            if (!snapshot.exists()) {
-                                mDatabaseRef.child("UserAccount").child("kakao_$kakaoUserId").setValue(account)
-                                Toast.makeText(this@login, "첫 방문을 환영합니다! 정보를 입력해 주세요.", Toast.LENGTH_SHORT).show()
-                                val intent = Intent(this@login, change::class.java)
-                                startActivity(intent)
-                                finish()
-                            } else {
-                                Toast.makeText(this@login, "${nickname}님 환영합니다!", Toast.LENGTH_SHORT).show()
-                                startActivity(Intent(this@login, MainActivity::class.java))
-                                finish()
-                            }
-                        }
-
-                        override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
-                            Toast.makeText(this@login, "${nickname}님 환영합니다!", Toast.LENGTH_SHORT).show()
-                            startActivity(Intent(this@login, MainActivity::class.java))
-                            finish()
-                        }
-                    })
+                firebaseAuthWithSocialAccount(
+                    email = email,
+                    socialId = kakaoUserId,
+                    name = nickname,
+                    providerPrefix = "kakao"
+                )
             }
         }
     }
@@ -366,15 +345,19 @@ class login : AppCompatActivity() {
     private fun getNaverUserInfo() {
         NidOAuthLogin().callProfileApi(object : NidProfileCallback<NidProfileResponse> {
             override fun onSuccess(result: NidProfileResponse) {
-                val email = result.profile?.email ?: "naver_user"
+                val naverUserId = result.profile?.id ?: System.currentTimeMillis().toString()
+                val email = result.profile?.email ?: "naver_$naverUserId@naver.com"
                 val name = result.profile?.name
-                val nickname = result.profile?.nickname
+                val nickname = result.profile?.nickname ?: name ?: "네이버 사용자"
 
-                Log.d(TAG, "네이버 정보 - 이메일: $email, 이름: $name, 닉네임: $nickname")
+                Log.d(TAG, "네이버 정보 - ID: $naverUserId, 이메일: $email, 닉네임: $nickname")
 
-                Toast.makeText(this@login, "${nickname ?: name ?: "사용자"}님 환영합니다!", Toast.LENGTH_SHORT).show()
-                startActivity(Intent(this@login, MainActivity::class.java))
-                finish()
+                firebaseAuthWithSocialAccount(
+                    email = email,
+                    socialId = naverUserId,
+                    name = nickname,
+                    providerPrefix = "naver"
+                )
             }
 
             override fun onFailure(httpStatus: Int, message: String) {
@@ -386,5 +369,101 @@ class login : AppCompatActivity() {
                 onFailure(errorCode, message)
             }
         })
+    }
+
+    private fun firebaseAuthWithSocialAccount(
+        email: String,
+        socialId: String,
+        name: String,
+        providerPrefix: String
+    ) {
+        val authEmail = if (email.contains("@")) email else "${providerPrefix}_${socialId}@$providerPrefix.com"
+        val authPassword = "social_${providerPrefix}_$socialId"
+
+        mFirebaseAuth.signInWithEmailAndPassword(authEmail, authPassword)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    val firebaseUser = mFirebaseAuth.currentUser
+                    val uid = firebaseUser?.uid ?: "${providerPrefix}_$socialId"
+
+                    mDatabaseRef.child("UserAccount").child(uid)
+                        .addListenerForSingleValueEvent(object : com.google.firebase.database.ValueEventListener {
+                            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                                if (!snapshot.exists()) {
+                                    val account = UserAccount()
+                                    account.idToken = uid
+                                    account.emailId = authEmail
+                                    account.name = name
+                                    mDatabaseRef.child("UserAccount").child(uid).setValue(account)
+
+                                    Toast.makeText(this@login, "첫 방문을 환영합니다! 정보를 입력해 주세요.", Toast.LENGTH_SHORT).show()
+                                    startActivity(Intent(this@login, change::class.java))
+                                    finish()
+                                } else {
+                                    Toast.makeText(this@login, "${name}님 환영합니다!", Toast.LENGTH_SHORT).show()
+                                    startActivity(Intent(this@login, MainActivity::class.java))
+                                    finish()
+                                }
+                            }
+
+                            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
+                                Toast.makeText(this@login, "${name}님 환영합니다!", Toast.LENGTH_SHORT).show()
+                                startActivity(Intent(this@login, MainActivity::class.java))
+                                finish()
+                            }
+                        })
+                } else {
+                    mFirebaseAuth.createUserWithEmailAndPassword(authEmail, authPassword)
+                        .addOnCompleteListener(this) { createTask ->
+                            if (createTask.isSuccessful) {
+                                val firebaseUser = mFirebaseAuth.currentUser
+                                val uid = firebaseUser?.uid ?: "${providerPrefix}_$socialId"
+
+                                val account = UserAccount()
+                                account.idToken = uid
+                                account.emailId = authEmail
+                                account.name = name
+
+                                mDatabaseRef.child("UserAccount").child(uid).setValue(account)
+
+                                Toast.makeText(this@login, "첫 방문을 환영합니다! 정보를 입력해 주세요.", Toast.LENGTH_SHORT).show()
+                                startActivity(Intent(this@login, change::class.java))
+                                finish()
+                            } else {
+                                Log.w(TAG, "Firebase Auth 생성 실패, Realtime Database 직접 저장 시도: ${createTask.exception?.message}")
+                                saveToRealtimeDatabaseOnly("${providerPrefix}_$socialId", authEmail, name)
+                            }
+                        }
+                }
+            }
+    }
+
+    private fun saveToRealtimeDatabaseOnly(userKey: String, email: String, name: String) {
+        val account = UserAccount()
+        account.idToken = userKey
+        account.emailId = email
+        account.name = name
+
+        mDatabaseRef.child("UserAccount").child(userKey)
+            .addListenerForSingleValueEvent(object : com.google.firebase.database.ValueEventListener {
+                override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                    if (!snapshot.exists()) {
+                        mDatabaseRef.child("UserAccount").child(userKey).setValue(account)
+                        Toast.makeText(this@login, "첫 방문을 환영합니다! 정보를 입력해 주세요.", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@login, change::class.java))
+                        finish()
+                    } else {
+                        Toast.makeText(this@login, "${name}님 환영합니다!", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@login, MainActivity::class.java))
+                        finish()
+                    }
+                }
+
+                override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
+                    Toast.makeText(this@login, "${name}님 환영합니다!", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this@login, MainActivity::class.java))
+                    finish()
+                }
+            })
     }
 }
