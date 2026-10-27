@@ -2,7 +2,6 @@ package com.example.wpqkf
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -11,6 +10,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.credentials.ClearCredentialStateRequest
@@ -81,13 +81,12 @@ class profile : AppCompatActivity() {
                         //이메일을 다시 가져오자
                         emailId = mFirebaseAuth.currentUser?.email
                     }
-                    Log.d("DEBUG","$emailId\n ${account?.name}\n${account?.age}\n${account?.number}",)
                     if (account != null) {
                         mTvTitlename.text = account.name?.toString()
-                        mTvEmail.text = "이메일: " + emailId.toString()
-                        mTvName.text = "이름: " + account.name?.toString()
-                        mTvAge.text = "나이: " + account.age?.toString()
-                        mTvNickmame.text = "전화번호: " + account.number?.toString()
+                        mTvEmail.text = getString(R.string.profile_email_format, emailId)
+                        mTvName.text = getString(R.string.profile_name_format, account.name)
+                        mTvAge.text = getString(R.string.profile_age_format, account.age)
+                        mTvNickmame.text = getString(R.string.profile_phone_format, account.number)
                         com.bumptech.glide.Glide.with(this@profile)
                             .load(account.image?.toString()) // 서버에 저장된 주소 불러오기
                             .into(findViewById(R.id.iv_profile_image_pr)) // 프로필 화면의 이미지뷰에 넣기
@@ -101,11 +100,9 @@ class profile : AppCompatActivity() {
         }
         fun logout(context: Context){
             val auth = FirebaseAuth.getInstance()
-            val sharedPreferences = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-            val editor = sharedPreferences.edit()
-
-            editor.clear()
-            editor.apply()
+            val sharedPreferences = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
+            sharedPreferences.edit { clear() }
+            GoogleCalendarHelper.forgetAccount(context)
             auth.signOut()
 
             val credentialManager = CredentialManager.create(this)
@@ -115,8 +112,8 @@ class profile : AppCompatActivity() {
                     val clearRequest = ClearCredentialStateRequest()
                     credentialManager.clearCredentialState(clearRequest)
                     Log.d("LOGOUT", "구글 로그인 세션 초기화 성공")
-                } catch (e: Exception) {
-                    Log.e("LOGOUT", "구글 로그인 세션 초기화 실패", e)
+                } catch (_: Exception) {
+                    Log.e("LOGOUT", "구글 로그인 세션 초기화 실패")
                 }
                 val intent = Intent(this@profile, login::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

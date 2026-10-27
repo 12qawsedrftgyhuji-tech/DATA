@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_email_format">이메일: %1$s</string>
+    <string name="profile_name_format">이름: %1$s</string>
+    <string name="profile_age_format">나이: %1$s</string>
+    <string name="profile_phone_format">전화번호: %1$s</string>
+</resources>

@@ -33,8 +33,22 @@
     <string name="google_calendar_end_time_hint">종료 시간 선택</string>
     <string name="google_calendar_end_time_required">종료 시간을 선택해주세요.</string>
     <string name="google_calendar_add_success">일정 및 Google Calendar에 등록되었습니다.</string>
-    <string name="google_calendar_add_partial">앱 내 일정은 추가되었으나 Google Calendar 등록에 실패했습니다.</string>
-    <string name="google_calendar_retry_prompt">Google Calendar 등록 실패</string>
-    <string name="google_calendar_retry_message">앱 내 일정은 정상 등록되었으나, Google Calendar 등록 중 오류가 발생했습니다.\n(%1$s)\n\n다시 시도하시겠습니까?</string>
     <string name="google_calendar_retry_button">재시도</string>
+    <string name="google_calendar_connection_success">Google Calendar가 연결되었습니다.</string>
+    <string name="google_calendar_error_title">Google Calendar 연결 안내</string>
+    <string name="google_calendar_admin_policy">이 Google 계정은 조직의 보안 정책으로 인해 캘린더 연결이 제한되어 있습니다. 학교 또는 조직 관리자에게 앱 접근 승인을 요청하거나 다른 Google 계정을 선택해 주세요.</string>
+    <string name="google_calendar_configuration_error">Google 연결 설정을 확인해야 합니다. 개발자에게 OAuth 사용자 유형, 테스트 사용자, Android 패키지 이름·SHA-1 및 Calendar API 활성화 상태 확인을 요청해 주세요.</string>
+    <string name="google_calendar_network_error">네트워크 연결이 원활하지 않습니다. 인터넷 연결을 확인한 후 다시 시도해 주세요.</string>
+    <string name="google_calendar_permission_error">캘린더 접근 권한이 없거나 연결이 만료되었습니다. 계정을 다시 연결하고 캘린더 권한을 허용해 주세요.</string>
+    <string name="google_calendar_cancelled">캘린더 연결이 취소되었거나 권한이 승인되지 않았습니다. Google 화면에서 조직 관리자 검토 안내를 보았다면 학교 또는 조직 관리자에게 앱 접근 승인을 요청하거나 다른 Google 계정을 선택해 주세요.</string>
+    <string name="google_calendar_unknown_error">Google Calendar에 연결하지 못했습니다. Google 화면에서 조직 관리자 검토 안내를 보았다면 관리자에게 앱 접근 승인을 요청해 주세요. 그 외에는 잠시 후 다시 시도해 주세요.</string>
+    <string name="google_calendar_local_available">Google Calendar 연결 없이도 앱의 자체 일정 관리를 계속 사용할 수 있습니다. 이미 앱에 저장한 일정은 유지됩니다.</string>
+    <string name="google_calendar_choose_other_account">다른 Google 계정 선택</string>
+    <string name="google_calendar_continue_without">연결 없이 계속</string>
+    <string name="google_calendar_disconnected">Google Calendar 연동이 해제되었습니다.</string>
+    <string name="google_calendar_disconnect_local_only">이 앱의 Calendar 연결을 해제했습니다. 온라인 권한 해제를 완료하지 못했으므로 Google 계정의 보안 → 서드 파티 연결에서 접근 권한을 확인해 주세요.</string>
+    <string name="google_calendar_busy">Google Calendar 요청을 처리 중입니다. 앱에 저장한 일정은 유지됩니다.</string>
+    <string name="google_calendar_view_events">다가오는 Google 일정 조회</string>
+    <string name="google_calendar_no_events">기본 캘린더에 다가오는 일정이 없습니다.</string>
+    <string name="google_calendar_untitled">제목 없음</string>
 </resources>
