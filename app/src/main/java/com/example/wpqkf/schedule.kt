@@ -1,6 +1,8 @@
 package com.example.wpqkf
 
 import android.app.TimePickerDialog
+import android.accounts.Account
+import android.accounts.AccountManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -18,14 +20,20 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.AuthorizationResult
+import com.google.android.gms.auth.api.identity.ClearTokenRequest
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.auth.api.identity.RevokeAccessRequest
+import com.google.android.gms.common.AccountPicker
+import com.google.api.client.http.HttpResponseException
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
@@ -76,24 +84,50 @@ class schedule : AppCompatActivity() {
     private lateinit var mTvEmptySchedule: TextView
 
     private var selectedDate: String = ""
+    private var calendarBusy = false
+    private var waitingForGoogleUi = false
+    private var authorizationOwner: String? = null
+    private var pendingAccount: Account? = null
+    private var pendingAction: ((String, Account) -> Unit)? = null
+    private var googleCalendarSwitch: MaterialSwitch? = null
+    private val authorizationClient by lazy { Identity.getAuthorizationClient(this) }
 
-    private val googleSignInLauncher = registerForActivityResult(
+    private val accountPickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(ApiException::class.java)
-                Toast.makeText(this, "Google 계정이 연결되었습니다.", Toast.LENGTH_SHORT).show()
-                updateGoogleAccountUi(account)
-            } catch (e: ApiException) {
-                Log.e(TAG, "Google 로그인 실패 status: ${e.statusCode}", e)
-                Toast.makeText(this, "Google 계정 연결 실패 (${e.statusCode})", Toast.LENGTH_SHORT).show()
-                updateGoogleAccountUi(GoogleCalendarHelper.getSignedInAccount(this))
-            }
+        waitingForGoogleUi = false
+        if (!isCurrentAuthorization()) {
+            finishCalendarAction()
         } else {
-            Toast.makeText(this, "Google 계정 연결이 취소되었습니다.", Toast.LENGTH_SHORT).show()
-            updateGoogleAccountUi(GoogleCalendarHelper.getSignedInAccount(this))
+            val name = result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
+            if (result.resultCode == RESULT_OK && !name.isNullOrBlank()) {
+                authorizeCalendar(Account(name, GoogleCalendarHelper.ACCOUNT_TYPE))
+            } else {
+                finishCalendarAction()
+                showCalendarError(CalendarError.CANCELLED)
+            }
+        }
+    }
+
+    private val authorizationLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        waitingForGoogleUi = false
+        if (!isCurrentAuthorization()) {
+            finishCalendarAction()
+        } else {
+            // Parse error-bearing intents even on RESULT_CANCELED. Google may return only
+            // a cancellation; in that case the app cannot infer the administrator's policy.
+            val data = result.data
+            if (data == null) {
+                finishCalendarAction()
+                showCalendarError(CalendarError.CANCELLED)
+            } else try {
+                acceptAuthorization(authorizationClient.getAuthorizationResultFromIntent(data))
+            } catch (e: Exception) {
+                finishCalendarAction()
+                showCalendarError(CalendarError.from(e))
+            }
         }
     }
 
@@ -101,6 +135,11 @@ class schedule : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_schedule)
+        authorizationOwner = savedInstanceState?.getString("calendar_authorization_owner")
+        waitingForGoogleUi = savedInstanceState?.getBoolean("calendar_waiting_for_ui") == true
+        pendingAccount = savedInstanceState?.getString("calendar_authorization_account")
+            ?.let { Account(it, GoogleCalendarHelper.ACCOUNT_TYPE) }
+        calendarBusy = authorizationOwner != null
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -127,7 +166,7 @@ class schedule : AppCompatActivity() {
             currentCal.get(Calendar.DAY_OF_MONTH)
         }일"
 
-        updateGoogleAccountUi(GoogleCalendarHelper.getSignedInAccount(this))
+        updateGoogleAccountUi()
 
         loadSchedules()
         refreshScheduleList()
@@ -138,8 +177,9 @@ class schedule : AppCompatActivity() {
         }
 
         fabAdd.setOnClickListener {
-            val sheetView =
-                LayoutInflater.from(this).inflate(R.layout.bottom_sheet_add_schedule, null)
+            val bottomSheetDialog = BottomSheetDialog(this)
+            bottomSheetDialog.setContentView(R.layout.bottom_sheet_add_schedule)
+            val sheetView = checkNotNull(bottomSheetDialog.findViewById<View>(R.id.bottom_sheet_content))
             val tvSheetDate = sheetView.findViewById<TextView>(R.id.tv_bottom_sheet_date)
             val btnClose = sheetView.findViewById<ImageButton>(R.id.btn_close_bottom_sheet)
             val btnCancel = sheetView.findViewById<MaterialButton>(R.id.btn_cancel_schedule)
@@ -152,9 +192,9 @@ class schedule : AppCompatActivity() {
             val etEndTime = sheetView.findViewById<EditText>(R.id.et_schedule_end_time)
             val etCategory = sheetView.findViewById<EditText>(R.id.et_schedule_category)
             val swAddToGoogleCalendar = sheetView.findViewById<MaterialSwitch>(R.id.sw_add_to_google_calendar)
+            googleCalendarSwitch = swAddToGoogleCalendar
 
-            val bottomSheetDialog = BottomSheetDialog(this)
-            bottomSheetDialog.setContentView(sheetView)
+            bottomSheetDialog.setOnDismissListener { googleCalendarSwitch = null }
             tvSheetDate.text = selectedDate
 
             bottomSheetDialog.setOnShowListener {
@@ -213,16 +253,17 @@ class schedule : AppCompatActivity() {
             }
             endTimeLayout.setEndIconOnClickListener { etEndTime.performClick() }
 
-            val currentAccount = GoogleCalendarHelper.getSignedInAccount(this)
+            val currentAccount = GoogleCalendarHelper.getSelectedAccount(this)
             swAddToGoogleCalendar.isChecked = (currentAccount != null)
 
             swAddToGoogleCalendar.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked && GoogleCalendarHelper.getSignedInAccount(this) == null) {
+                if (isChecked && GoogleCalendarHelper.getSelectedAccount(this) == null) {
+                    swAddToGoogleCalendar.isChecked = false
                     AlertDialog.Builder(this)
                         .setTitle("Google Calendar 연동")
                         .setMessage("Google 계정을 연결해야 Google Calendar에 일정을 추가할 수 있습니다. 지금 연결하시겠습니까?")
                         .setPositiveButton("연결") { _, _ ->
-                            launchGoogleSignIn()
+                            chooseGoogleAccount()
                         }
                         .setNegativeButton("취소") { _, _ ->
                             swAddToGoogleCalendar.isChecked = false
@@ -279,22 +320,33 @@ class schedule : AppCompatActivity() {
                     category = category
                 )
 
+                // Capture user choices before the asynchronous Firebase write completes.
+                val addToGoogle = swAddToGoogleCalendar.isChecked
+                val calendarAccount = GoogleCalendarHelper.getSelectedAccount(this)
+                val eventDate = selectedDate
+                val eventStartHour = pickedStartHour
+                val eventStartMinute = pickedStartMinute
+                val eventEndHour = pickedEndHour
+                val eventEndMinute = pickedEndMinute
+
                 newRef.setValue(newItem)
                     .addOnSuccessListener {
-                        if (swAddToGoogleCalendar.isChecked) {
-                            val signedInAccount = GoogleCalendarHelper.getSignedInAccount(this)
+                        if (isFinishing || isDestroyed || uid != GoogleCalendarHelper.ownerId()) {
+                            return@addOnSuccessListener
+                        }
+                        bottomSheetDialog.dismiss()
+                        if (addToGoogle) {
+                            val signedInAccount = calendarAccount
                             if (signedInAccount != null) {
                                 syncWithGoogleCalendar(
                                     account = signedInAccount,
+                                    date = eventDate,
                                     title = name,
                                     category = category,
-                                    startHour = pickedStartHour,
-                                    startMinute = pickedStartMinute,
-                                    endHour = pickedEndHour,
-                                    endMinute = pickedEndMinute,
-                                    onComplete = {
-                                        bottomSheetDialog.dismiss()
-                                    }
+                                    startHour = eventStartHour,
+                                    startMinute = eventStartMinute,
+                                    endHour = eventEndHour,
+                                    endMinute = eventEndMinute
                                 )
                             } else {
                                 Toast.makeText(
@@ -309,10 +361,11 @@ class schedule : AppCompatActivity() {
                             bottomSheetDialog.dismiss()
                         }
                     }
-                    .addOnFailureListener { e ->
+                    .addOnFailureListener {
+                        if (isFinishing || isDestroyed) return@addOnFailureListener
                         btnAddSchedule.isEnabled = true
-                        Toast.makeText(this, "저장 실패: ${e.message}", Toast.LENGTH_SHORT).show()
-                        Log.e(TAG, "파이어베이스 일정 저장 실패", e)
+                        Toast.makeText(this, "일정을 저장하지 못했습니다. 네트워크 연결을 확인해 주세요.", Toast.LENGTH_SHORT).show()
+                        Log.e(TAG, "파이어베이스 일정 저장 실패")
                     }
             }
             bottomSheetDialog.show()
@@ -342,7 +395,7 @@ class schedule : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        updateGoogleAccountUi(GoogleCalendarHelper.getSignedInAccount(this))
+        updateGoogleAccountUi()
     }
 
     override fun onStop() {
@@ -350,148 +403,259 @@ class schedule : AppCompatActivity() {
         super.onStop()
     }
 
-    private fun updateGoogleAccountUi(account: GoogleSignInAccount?) {
-        val tvStatus = findViewById<TextView>(R.id.tv_google_account_status) ?: return
-        val btnConnect = findViewById<MaterialButton>(R.id.btn_google_connect) ?: return
-
-        if (account != null && GoogleCalendarHelper.hasCalendarPermission(this, account)) {
-            tvStatus.text = getString(R.string.google_calendar_connected, account.email ?: "")
-            btnConnect.text = getString(R.string.google_calendar_manage)
-            btnConnect.setOnClickListener { view ->
-                showGoogleAccountMenu(view)
-            }
-        } else {
-            tvStatus.text = getString(R.string.google_calendar_not_connected)
-            btnConnect.text = getString(R.string.google_calendar_connect)
-            btnConnect.setOnClickListener {
-                launchGoogleSignIn()
-            }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Tokens and pending event writes are deliberately not persisted or replayed.
+        if (waitingForGoogleUi) {
+            outState.putString("calendar_authorization_owner", authorizationOwner)
+            outState.putString("calendar_authorization_account", pendingAccount?.name)
+            outState.putBoolean("calendar_waiting_for_ui", true)
         }
     }
 
-    private fun launchGoogleSignIn() {
-        val client = GoogleCalendarHelper.getGoogleSignInClient(this)
-        googleSignInLauncher.launch(client.signInIntent)
+    private fun updateGoogleAccountUi() {
+        val account = GoogleCalendarHelper.getSelectedAccount(this)
+        val tvStatus = findViewById<TextView>(R.id.tv_google_account_status) ?: return
+        val btnConnect = findViewById<MaterialButton>(R.id.btn_google_connect) ?: return
+        btnConnect.isEnabled = !calendarBusy
+        tvStatus.text = if (account == null) getString(R.string.google_calendar_not_connected)
+            else getString(R.string.google_calendar_connected, account.name)
+        btnConnect.text = getString(if (account == null) R.string.google_calendar_connect else R.string.google_calendar_manage)
+        btnConnect.setOnClickListener { view ->
+            if (account == null) chooseGoogleAccount() else showGoogleAccountMenu(view)
+        }
+        if (account == null) googleCalendarSwitch?.isChecked = false
+    }
+
+    private fun isCurrentAuthorization() = !isFinishing && !isDestroyed &&
+        authorizationOwner != null && authorizationOwner == GoogleCalendarHelper.ownerId()
+
+    private fun finishCalendarAction() {
+        calendarBusy = false
+        waitingForGoogleUi = false
+        pendingAccount = null
+        pendingAction = null
+        authorizationOwner = null
+        if (!isDestroyed) updateGoogleAccountUi()
+    }
+
+    private fun chooseGoogleAccount() {
+        if (calendarBusy) return
+        calendarBusy = true
+        authorizationOwner = GoogleCalendarHelper.ownerId()
+        pendingAction = { _, _ ->
+            finishCalendarAction()
+            googleCalendarSwitch?.isChecked = true
+            Toast.makeText(this, R.string.google_calendar_connection_success, Toast.LENGTH_SHORT).show()
+        }
+        updateGoogleAccountUi()
+        try {
+            val options = AccountPicker.AccountChooserOptions.Builder()
+                .setAllowableAccountsTypes(listOf(GoogleCalendarHelper.ACCOUNT_TYPE))
+                .setAlwaysShowAccountPicker(true).build()
+            waitingForGoogleUi = true
+            accountPickerLauncher.launch(AccountPicker.newChooseAccountIntent(options))
+        } catch (e: Exception) {
+            finishCalendarAction()
+            showCalendarError(CalendarError.from(e))
+        }
+    }
+
+    private fun authorizeCalendar(account: Account) {
+        pendingAccount = account
+        try {
+            val request = AuthorizationRequest.builder()
+                .setAccount(account)
+                .setRequestedScopes(GoogleCalendarHelper.requestedScopes)
+                .setOptOutIncludingGrantedScopes(true)
+                .build()
+            authorizationClient.authorize(request)
+                .addOnSuccessListener { result ->
+                    if (!isCurrentAuthorization()) {
+                        finishCalendarAction()
+                        return@addOnSuccessListener
+                    }
+                    try {
+                        if (result.hasResolution()) {
+                            val resolution = result.pendingIntent ?: error("Missing authorization resolution")
+                            waitingForGoogleUi = true
+                            authorizationLauncher.launch(IntentSenderRequest.Builder(resolution.intentSender).build())
+                        } else acceptAuthorization(result)
+                    } catch (e: Exception) {
+                        finishCalendarAction()
+                        showCalendarError(CalendarError.from(e))
+                    }
+                }
+                .addOnFailureListener { error ->
+                    val current = isCurrentAuthorization()
+                    finishCalendarAction()
+                    if (current) showCalendarError(CalendarError.from(error))
+                }
+        } catch (e: Exception) {
+            finishCalendarAction()
+            showCalendarError(CalendarError.from(e))
+        }
+    }
+
+    private fun acceptAuthorization(result: AuthorizationResult) {
+        val account = pendingAccount
+        val token = result.accessToken
+        if (!isCurrentAuthorization() || account == null) {
+            finishCalendarAction()
+            return
+        }
+        if (token.isNullOrBlank() || GoogleCalendarHelper.SCOPE !in result.grantedScopes) {
+            finishCalendarAction()
+            showCalendarError(CalendarError.PERMISSION)
+            return
+        }
+        GoogleCalendarHelper.rememberAccount(this, account)
+        val action = pendingAction
+        pendingAction = null
+        pendingAccount = null
+        if (action != null) action(token, account) else {
+            // Activity recreation may finish linking, but must never replay an event write.
+            finishCalendarAction()
+            Toast.makeText(this, R.string.google_calendar_connection_success, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showGoogleAccountMenu(view: View) {
+        if (calendarBusy) return
         val popup = androidx.appcompat.widget.PopupMenu(this, view)
+        popup.menu.add(getString(R.string.google_calendar_view_events))
         popup.menu.add(getString(R.string.google_calendar_change_account))
         popup.menu.add(getString(R.string.google_calendar_disconnect))
-        popup.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.title) {
-                getString(R.string.google_calendar_change_account) -> {
-                    GoogleCalendarHelper.getGoogleSignInClient(this).signOut().addOnCompleteListener {
-                        launchGoogleSignIn()
-                    }
-                    true
-                }
-                getString(R.string.google_calendar_disconnect) -> {
-                    GoogleCalendarHelper.getGoogleSignInClient(this).signOut().addOnCompleteListener {
-                        Toast.makeText(this, "Google 계정 연동이 해제되었습니다.", Toast.LENGTH_SHORT).show()
-                        updateGoogleAccountUi(null)
-                    }
-                    true
-                }
-                else -> false
+        popup.setOnMenuItemClickListener { item ->
+            when (item.title) {
+                getString(R.string.google_calendar_view_events) -> showGoogleEvents()
+                getString(R.string.google_calendar_change_account) -> chooseGoogleAccount()
+                getString(R.string.google_calendar_disconnect) -> disconnectGoogleCalendar()
             }
+            true
         }
         popup.show()
     }
 
-    private fun syncWithGoogleCalendar(
-        account: GoogleSignInAccount,
-        title: String,
-        category: String,
-        startHour: Int,
-        startMinute: Int,
-        endHour: Int,
-        endMinute: Int,
-        onComplete: () -> Unit
-    ) {
-        val startCal = GoogleCalendarHelper.parseKoreanDate(selectedDate) ?: Calendar.getInstance()
-        startCal.set(Calendar.HOUR_OF_DAY, startHour)
-        startCal.set(Calendar.MINUTE, startMinute)
-        startCal.set(Calendar.SECOND, 0)
-        startCal.set(Calendar.MILLISECOND, 0)
-
-        val endCal = startCal.clone() as Calendar
-        endCal.set(Calendar.HOUR_OF_DAY, endHour)
-        endCal.set(Calendar.MINUTE, endMinute)
-        endCal.set(Calendar.SECOND, 0)
-        endCal.set(Calendar.MILLISECOND, 0)
-
-        if (endCal.before(startCal)) {
-            // End time is earlier than start time (e.g. 23:00 to 01:00 next day) -> set end date to next day
-            endCal.add(Calendar.DAY_OF_MONTH, 1)
-        } else if (endCal == startCal) {
-            // End time same as start time -> default to 1 hour duration
-            endCal.add(Calendar.HOUR_OF_DAY, 1)
-        }
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = GoogleCalendarHelper.createCalendarEvent(
-                context = this@schedule,
-                account = account,
-                title = title,
-                category = category,
-                startCal = startCal,
-                endCal = endCal
-            )
-
-            withContext(Dispatchers.Main) {
-                if (result.isSuccess) {
-                    Toast.makeText(this@schedule, getString(R.string.google_calendar_add_success), Toast.LENGTH_SHORT).show()
-                    onComplete()
-                } else {
-                    val errorMsg = result.exceptionOrNull()?.localizedMessage ?: "알 수 없는 오류"
-                    showRetryDialog(
-                        title = title,
-                        category = category,
-                        startHour = startHour,
-                        startMinute = startMinute,
-                        endHour = endHour,
-                        endMinute = endMinute,
-                        errorMsg = errorMsg,
-                        account = account,
-                        onComplete = onComplete
-                    )
+    private fun disconnectGoogleCalendar() {
+        val account = GoogleCalendarHelper.getSelectedAccount(this) ?: return
+        // Stop using the account locally even if the network revocation fails.
+        GoogleCalendarHelper.forgetAccount(this)
+        calendarBusy = true
+        updateGoogleAccountUi()
+        val owner = GoogleCalendarHelper.ownerId()
+        try {
+            authorizationClient.revokeAccess(RevokeAccessRequest.builder()
+                .setAccount(account).setScopes(GoogleCalendarHelper.requestedScopes).build())
+                .addOnCompleteListener { task ->
+                    finishCalendarAction()
+                    if (!isFinishing && !isDestroyed && owner == GoogleCalendarHelper.ownerId()) {
+                        Toast.makeText(this, if (task.isSuccessful) R.string.google_calendar_disconnected
+                            else R.string.google_calendar_disconnect_local_only, Toast.LENGTH_LONG).show()
+                    }
                 }
-            }
+        } catch (_: Exception) {
+            finishCalendarAction()
+            Toast.makeText(this, R.string.google_calendar_disconnect_local_only, Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun showRetryDialog(
+    private fun <T> runCalendarAction(account: Account, operation: (String) -> Result<T>,
+        retry: () -> Unit, onSuccess: (T) -> Unit) {
+        if (calendarBusy) {
+            Toast.makeText(this, R.string.google_calendar_busy, Toast.LENGTH_LONG).show()
+            return
+        }
+        calendarBusy = true
+        authorizationOwner = GoogleCalendarHelper.ownerId()
+        pendingAction = { token, _ ->
+            lifecycleScope.launch {
+                val result = withContext(Dispatchers.IO) { operation(token) }
+                if (!isCurrentAuthorization()) {
+                    finishCalendarAction()
+                    return@launch
+                }
+                result.fold(onSuccess = { value ->
+                    finishCalendarAction()
+                    onSuccess(value)
+                }, onFailure = { error ->
+                    if ((error as? HttpResponseException)?.statusCode == 401) {
+                        // Do not keep reusing a revoked token. A retry must authorize again.
+                        try {
+                            authorizationClient.clearToken(ClearTokenRequest.builder().setToken(token).build())
+                                .addOnCompleteListener {
+                                    val current = isCurrentAuthorization()
+                                    finishCalendarAction()
+                                    if (current) showCalendarError(CalendarError.from(error), retry)
+                                }
+                        } catch (_: Exception) {
+                            finishCalendarAction()
+                            showCalendarError(CalendarError.from(error), retry)
+                        }
+                    } else {
+                        finishCalendarAction()
+                        showCalendarError(CalendarError.from(error), retry)
+                    }
+                })
+            }
+        }
+        updateGoogleAccountUi()
+        authorizeCalendar(account)
+    }
+
+    private fun showCalendarError(error: CalendarError, retry: (() -> Unit)? = null) {
+        if (isFinishing || isDestroyed) return
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.google_calendar_error_title)
+            .setMessage(getString(error.messageRes) + "\n\n" + getString(R.string.google_calendar_local_available))
+            .setPositiveButton(R.string.google_calendar_choose_other_account) { _, _ -> chooseGoogleAccount() }
+            .setNegativeButton(R.string.google_calendar_continue_without) { _, _ ->
+                googleCalendarSwitch?.isChecked = false
+            }
+        if (retry != null && error != CalendarError.ADMIN_POLICY && error != CalendarError.CONFIGURATION) {
+            dialog.setNeutralButton(R.string.google_calendar_retry_button) { _, _ -> retry() }
+        }
+        dialog.show()
+    }
+
+    private fun syncWithGoogleCalendar(
+        account: Account,
+        date: String,
         title: String,
         category: String,
         startHour: Int,
         startMinute: Int,
         endHour: Int,
         endMinute: Int,
-        errorMsg: String,
-        account: GoogleSignInAccount,
-        onComplete: () -> Unit
+        eventId: String = java.util.UUID.randomUUID().toString().replace("-", "")
     ) {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.google_calendar_retry_prompt))
-            .setMessage(getString(R.string.google_calendar_retry_message, errorMsg))
-            .setPositiveButton(getString(R.string.google_calendar_retry_button)) { _, _ ->
-                syncWithGoogleCalendar(
-                    account = account,
-                    title = title,
-                    category = category,
-                    startHour = startHour,
-                    startMinute = startMinute,
-                    endHour = endHour,
-                    endMinute = endMinute,
-                    onComplete = onComplete
-                )
-            }
-            .setNegativeButton("닫기") { _, _ ->
-                onComplete()
-            }
-            .setCancelable(false)
-            .show()
+        val startCal = GoogleCalendarHelper.parseKoreanDate(date) ?: return
+        startCal.set(Calendar.HOUR_OF_DAY, startHour)
+        startCal.set(Calendar.MINUTE, startMinute)
+        val endCal = (startCal.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, endHour)
+            set(Calendar.MINUTE, endMinute)
+            if (before(startCal)) add(Calendar.DAY_OF_MONTH, 1)
+            else if (timeInMillis == startCal.timeInMillis) add(Calendar.HOUR_OF_DAY, 1)
+        }
+        runCalendarAction(account,
+            operation = { token -> GoogleCalendarHelper.createCalendarEvent(token, title, category, startCal, endCal, eventId = eventId) },
+            retry = { syncWithGoogleCalendar(account, date, title, category, startHour, startMinute, endHour, endMinute, eventId) },
+            onSuccess = { Toast.makeText(this, R.string.google_calendar_add_success, Toast.LENGTH_SHORT).show() })
+    }
+
+    private fun showGoogleEvents() {
+        val account = GoogleCalendarHelper.getSelectedAccount(this) ?: return
+        runCalendarAction(account, { token -> GoogleCalendarHelper.listUpcomingEvents(token) },
+            retry = { showGoogleEvents() }, onSuccess = { events ->
+                val lines = events.map { event ->
+                    val start = event.start?.dateTime ?: event.start?.date
+                    "${start ?: ""}  ${event.summary ?: getString(R.string.google_calendar_untitled)}"
+                }
+                AlertDialog.Builder(this).setTitle(R.string.google_calendar_view_events)
+                    .setMessage(if (lines.isEmpty()) getString(R.string.google_calendar_no_events) else lines.joinToString("\n\n"))
+                    .setPositiveButton(R.string.schedule_close, null).show()
+            })
     }
 
     private fun getScheduleStorageKey(): String {
@@ -506,12 +670,12 @@ class schedule : AppCompatActivity() {
             for ((date, schedules) in allSchedules) {
                 val daySchedulesJson = JSONArray()
 
-                for (schedule in schedules) {
+                for ((_, name, hour, minute, category) in schedules) {
                     val scheduleJson = JSONObject().apply {
-                        put("name", schedule.name)
-                        put("hour", schedule.hour)
-                        put("minute", schedule.minute)
-                        put("category", schedule.category)
+                        put("name", name)
+                        put("hour", hour)
+                        put("minute", minute)
+                        put("category", category)
                     }
                     daySchedulesJson.put(scheduleJson)
                 }
@@ -519,10 +683,9 @@ class schedule : AppCompatActivity() {
                 schedulesJson.put(date, daySchedulesJson)
             }
 
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .edit()
-                .putString(getScheduleStorageKey(), schedulesJson.toString())
-                .apply()
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit {
+                putString(getScheduleStorageKey(), schedulesJson.toString())
+            }
         } catch (e: JSONException) {
             Log.e(TAG, "일정을 저장하지 못했습니다.", e)
         }

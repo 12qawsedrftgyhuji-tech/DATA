@@ -1,46 +1,57 @@
 package com.example.wpqkf
 
 import android.content.Context
-import android.util.Log
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import android.accounts.Account
+import androidx.core.content.edit
 import com.google.android.gms.common.api.Scope
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.http.HttpTransport
+import com.google.api.client.http.HttpResponseException
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
+import com.google.api.client.util.DateTime
 import com.google.api.services.calendar.CalendarScopes
 import com.google.api.services.calendar.model.Event
 import com.google.api.services.calendar.model.EventDateTime
+import com.google.firebase.auth.FirebaseAuth
 import java.util.Calendar
 import java.util.TimeZone
 import java.util.regex.Pattern
 
 object GoogleCalendarHelper {
-    private const val TAG = "GoogleCalendarHelper"
-    val CALENDAR_SCOPE by lazy { Scope(CalendarScopes.CALENDAR_EVENTS) }
+    // Only the user's own primary calendar is used; shared calendars need no access.
+    const val SCOPE = "https://www.googleapis.com/auth/calendar.events.owned"
+    const val ACCOUNT_TYPE = "com.google"
+    const val ACCOUNT_PREFS = "google_calendar_accounts"
+    val requestedScopes: List<Scope> get() = listOf(Scope(SCOPE))
+    fun ownerId(): String = FirebaseAuth.getInstance().currentUser?.uid ?: "guest"
 
-    fun getGoogleSignInClient(context: Context): GoogleSignInClient {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .requestScopes(CALENDAR_SCOPE)
-            .build()
-        return GoogleSignIn.getClient(context, gso)
-    }
+    // Store the chosen account per app user, never a token. Each API action reauthorizes.
+    fun getSelectedAccount(context: Context): Account? = context
+        .getSharedPreferences(ACCOUNT_PREFS, Context.MODE_PRIVATE)
+        .getString(ownerId(), null)?.takeIf { it.isNotBlank() }?.let { Account(it, ACCOUNT_TYPE) }
 
-    fun getSignedInAccount(context: Context): GoogleSignInAccount? {
-        val account = GoogleSignIn.getLastSignedInAccount(context)
-        return if (account != null && GoogleSignIn.hasPermissions(account, CALENDAR_SCOPE)) {
-            account
-        } else {
-            null
+    fun rememberAccount(context: Context, account: Account) {
+        context.getSharedPreferences(ACCOUNT_PREFS, Context.MODE_PRIVATE).edit {
+            putString(ownerId(), account.name)
         }
     }
 
-    fun hasCalendarPermission(context: Context, account: GoogleSignInAccount?): Boolean {
-        return account != null && GoogleSignIn.hasPermissions(account, CALENDAR_SCOPE)
+    fun forgetAccount(context: Context) {
+        context.getSharedPreferences(ACCOUNT_PREFS, Context.MODE_PRIVATE).edit {
+            remove(ownerId())
+        }
     }
+
+    internal fun service(accessToken: String, transport: HttpTransport = NetHttpTransport()) =
+        com.google.api.services.calendar.Calendar.Builder(
+            transport, GsonFactory.getDefaultInstance()
+        ) { request ->
+            request.headers.authorization = "Bearer $accessToken"
+            request.connectTimeout = 15_000
+            request.readTimeout = 20_000
+            request.isLoggingEnabled = false
+            request.isCurlLoggingEnabled = false
+        }.setApplicationName("DATA Schedule App").build()
 
     fun parseKoreanDate(dateStr: String): Calendar? {
         val pattern = Pattern.compile("(\\d+)년\\s*(\\d+)월\\s*(\\d+)일")
@@ -68,29 +79,25 @@ object GoogleCalendarHelper {
     }
 
     fun createCalendarEvent(
-        context: Context,
-        account: GoogleSignInAccount,
+        accessToken: String,
         title: String,
         category: String,
         startCal: Calendar,
-        endCal: Calendar
+        endCal: Calendar,
+        transport: HttpTransport = NetHttpTransport(),
+        eventId: String = java.util.UUID.randomUUID().toString().replace("-", "")
     ): Result<Event> {
         return try {
-            val credential = GoogleAccountCredential.usingOAuth2(
-                context,
-                listOf(CalendarScopes.CALENDAR_EVENTS)
-            ).setSelectedAccount(account.account)
-
-            val calendarService = com.google.api.services.calendar.Calendar.Builder(
-                NetHttpTransport(),
-                GsonFactory.getDefaultInstance(),
-                credential
-            ).setApplicationName("DATA Schedule App").build()
-
             val (startDateTime, startTz) = buildEventDateTime(startCal)
             val (endDateTime, endTz) = buildEventDateTime(endCal)
 
             val event = Event().apply {
+                id = eventId
+                summary = title
+                description = if (category.isNotBlank()) "카테고리: $category" else null
+                start = EventDateTime().setDateTime(startDateTime).setTimeZone(startTz)
+                end = EventDateTime().setDateTime(endDateTime).setTimeZone(endTz)
+
                 setSummary(title)
                 if (category.isNotBlank()) {
                     setDescription("카테고리: $category")
@@ -99,12 +106,25 @@ object GoogleCalendarHelper {
                 setEnd(EventDateTime().setDateTime(endDateTime).setTimeZone(endTz))
             }
 
-            val createdEvent = calendarService.events().insert("primary", event).execute()
-            Log.d(TAG, "Successfully created Google Calendar event: ${createdEvent.id}")
+            val calendar = service(accessToken, transport)
+            val createdEvent = try {
+                calendar.events().insert("primary", event).execute()
+            } catch (e: HttpResponseException) {
+                // A previous request may have succeeded before a network timeout.
+                if (e.statusCode != 409) throw e
+                calendar.events().get("primary", eventId).execute()
+            }
             Result.success(createdEvent)
         } catch (e: Exception) {
-            Log.e(TAG, "Error creating Google Calendar event", e)
             Result.failure(e)
         }
     }
+
+    fun listUpcomingEvents(accessToken: String, transport: HttpTransport = NetHttpTransport()): Result<List<Event>> =
+        runCatching {
+            service(accessToken, transport).events().list("primary")
+                .setTimeMin(DateTime(System.currentTimeMillis()))
+                .setSingleEvents(true).setOrderBy("startTime").setMaxResults(10)
+                .execute().items.orEmpty()
+        }
 }
