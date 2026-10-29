@@ -1,17 +1,17 @@
 package com.example.wpqkf
 //post용 코드
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.view.View
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.ImageButton
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -20,7 +20,6 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
-import android.webkit.WebView
 
 class postdt : AppCompatActivity() {
     private lateinit var mBtnSchedule: ImageButton
@@ -44,6 +43,23 @@ class postdt : AppCompatActivity() {
         val tvAuthor = findViewById<TextView>(R.id.tvDtAuthor)
         val wvBody = findViewById<WebView>(R.id.wvDtBody)
         wvBody.settings.javaScriptEnabled = false
+
+        // 링크를 누르면 외부 브라우저로 열기
+        wvBody.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url ?: return true
+                // http/https 링크만 외부 브라우저로 열기
+                if (url.scheme == "http" || url.scheme == "https") {
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, url))
+                    } catch (e: Exception) {
+                        Toast.makeText(this@postdt, "링크를 열 수 없습니다.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                return true // WebView 안에서 이동하지 않음
+            }
+        }
+
         val tvCategory = findViewById<TextView>(R.id.tvDtCategory)
 
         database = Firebase.database.reference
@@ -61,13 +77,18 @@ class postdt : AppCompatActivity() {
                     tvAuthor.text = post.author
                     tvCategory.text = "[${post.category}]"
 
-                    val bodyHtml = post.body ?: ""
+                    // 글자로만 적힌 URL(https://...)도 자동으로 링크 처리
+                    val rawBody = post.body ?: ""
+                    val urlRegex = Regex("""(?<!["'=])((?:https?://)(?:(?!&nbsp;)[^\s<>"'])+)(?![^<]*</a>)""")
+                    val bodyHtml = urlRegex.replace(rawBody) { "<a href=\"${it.value}\">${it.value}</a>" }
+
                     val fullHtml = """
         <html><head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             body { margin:0; padding:0; font-family:sans-serif; font-size:16px; line-height:1.6; color:#000000; }
             img { max-width:100%; height:auto; display:block; margin:6px 0; border-radius:6px; }
+            a { color:#1a73e8; word-break:break-all; }
         </style>
         </head><body>$bodyHtml</body></html>
     """.trimIndent()
