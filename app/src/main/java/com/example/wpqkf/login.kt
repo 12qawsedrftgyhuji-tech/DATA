@@ -93,8 +93,6 @@ class login : AppCompatActivity() {
                             }
                         })
                 } else {
-                    Log.w(TAG,"Firebase 구글 로그인 실패")
-                    Toast.makeText(this,"인증에 실패했습니다",Toast.LENGTH_SHORT).show()
                     Log.w(TAG, "Firebase 구글 로그인 실패", task.exception)
                     Toast.makeText(this, "인증에 실패했습니다: ${task.exception?.localizedMessage}", Toast.LENGTH_SHORT).show()
                 }
@@ -112,13 +110,6 @@ class login : AppCompatActivity() {
                         val idToken = googleIdTokenCredential.idToken
 
                         signInWithFirebase(idToken)
-                    } catch (_: GoogleIdTokenParsingException){
-                        Log.e(TAG, "Received an invalid google id token response")
-                        if (idToken != null) {
-                            signInWithFirebase(idToken)
-                        } else {
-                            Log.e(TAG, "구글 ID 토큰이 비어 있습니다.")
-                        }
                     } catch (e: GoogleIdTokenParsingException) {
                         Log.e(TAG, "Received an invalid google id token response", e)
                     }
@@ -148,9 +139,6 @@ class login : AppCompatActivity() {
                     context = this@login,
                 )
                 handleSignIn(result)
-            } catch (_: Exception) {
-                Log.e(TAG, "강제 로그인 창 띄우기 실패")
-                Toast.makeText(this@login, "구글 로그인을 시작할 수 없습니다. 기기 설정을 확인해 주세요.", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 Log.e(TAG, "강제 로그인 창 띄우기 실패: ${e.message}")
                 Toast.makeText(this@login, "구글 로그인을 시작할 수 없습니다: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
@@ -159,17 +147,13 @@ class login : AppCompatActivity() {
     }
 
     private fun startLogin() {
-        val WEB_CLIENT_ID: String = getString(R.string.default_web_client_id)
+        val webClientId: String = getString(R.string.default_web_client_id)
         val nonce = generateSecureRandomNonce()
 
         val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(WEB_CLIENT_ID)
+            .setServerClientId(webClientId)
             .setAutoSelectEnabled(false)
-            .setNonce(nonce)
-            .build()
-
-        val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(serverClientId = WEB_CLIENT_ID)
             .setNonce(nonce)
             .build()
 
@@ -191,17 +175,9 @@ class login : AppCompatActivity() {
                     is GetCredentialCancellationException -> {
                         Log.d(TAG, "사용자가 로그인을 취소함")
                     }
-                    is NoCredentialException->{
-                        Log.e(TAG,"저장된 자격 증명이 없습니다")
-                        Toast.makeText(this@login, "계정을 선택하세요.", Toast.LENGTH_SHORT).show()
-                        tryWithGoogleSignInOption(WEB_CLIENT_ID, credentialManager, nonce)
-                    }
-                    else -> {
-                        Log.e(TAG, "알 수 없는 로그인 오류 발생")
-                        Toast.makeText(this@login,"로그인 중 오류가 발생했습니다. 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
                     is NoCredentialException -> {
                         Log.e(TAG, "저장된 자격 증명이 없습니다: ${e.message}")
-                        tryWithGoogleSignInOption(WEB_CLIENT_ID, credentialManager, nonce)
+                        tryWithGoogleSignInOption(webClientId, credentialManager, nonce)
                     }
                     else -> {
                         Log.e(TAG, "알 수 없는 로그인 오류 발생: ${e.message}", e)
@@ -237,7 +213,6 @@ class login : AppCompatActivity() {
         }
 
         val keyHash = Utility.getKeyHash(this)
-        Log.d("KeyHash", keyHash)
         Log.d("KeyHash", "카카오 디버그 키 해시: $keyHash")
 
         val btnKakao = findViewById<Button>(R.id.btn_kakao_login)
@@ -288,9 +263,6 @@ class login : AppCompatActivity() {
     private fun startKakaoLogin() {
         val callback: (OAuthToken?, Throwable?) -> Unit = { token, error ->
             if (error != null) {
-                Log.e(TAG, "카카오계정으로 로그인 실패")
-                Toast.makeText(this, "카카오 로그인 실패: ${error.localizedMessage}", Toast.LENGTH_SHORT)
-                    .show()
                 Log.e(TAG, "카카오계정으로 로그인 실패", error)
                 Toast.makeText(this, "카카오 로그인 실패: ${error.localizedMessage}", Toast.LENGTH_SHORT).show()
             } else if (token != null) {
@@ -322,19 +294,11 @@ class login : AppCompatActivity() {
     private fun getKakaoUserInfo() {
         UserApiClient.instance.me { user, error ->
             if (error != null) {
-                Log.e(TAG, "사용자 정보 요청 실패")
-            } else if (user != null) {
-                val nickname = user.kakaoAccount?.profile?.nickname
-                // 기존 파이어베이스/데이터베이스 로그인 로직 연동
-                // ...
-                Toast.makeText(this, "${nickname ?: "사용자"}님 환영합니다!", Toast.LENGTH_SHORT).show()
-                startActivity(Intent(this, MainActivity::class.java))
-                finish()
-                Log.e(TAG, "사용자 정보 요청 실패", error)
+                Log.e(TAG, "카카오 사용자 정보 요청 실패", error)
                 Toast.makeText(this, "카카오 사용자 정보 요청 실패: ${error.localizedMessage}", Toast.LENGTH_SHORT).show()
             } else if (user != null) {
                 val kakaoUserId = user.id.toString()
-                val email = user.kakaoAccount?.email ?: "kakao_$kakaoUserId@kakao.com"
+                val email = user.kakaoAccount?.email ?: "kakao_${kakaoUserId}@kakao.com"
                 val nickname = user.kakaoAccount?.profile?.nickname ?: "카카오 사용자"
 
                 Log.d(TAG, "카카오 사용자 정보: ID=$kakaoUserId, 이메일=$email, 닉네임=$nickname")
@@ -356,15 +320,8 @@ class login : AppCompatActivity() {
             }
 
             override fun onFailure(errorCode: String, errorDesc: String) {
-                Log.w(TAG, "네이버 로그인 실패: code=$errorCode")
+                Log.w(TAG, "네이버 로그인 실패: errorCode=$errorCode, errorDesc=$errorDesc")
                 Toast.makeText(this@login, "네이버 로그인 실패: $errorDesc", Toast.LENGTH_SHORT).show()
-            override fun onFailure(httpStatus: Int, message: String) {
-                val errorDescription = NaverIdLoginSDK.getLastErrorDescription()
-                Toast.makeText(this@login, "네이버 로그인 실패: $errorDescription", Toast.LENGTH_SHORT).show()
-            }
-
-            override fun onError(errorCode: Int, message: String) {
-                onFailure(errorCode, message)
             }
         }
 
@@ -374,20 +331,12 @@ class login : AppCompatActivity() {
     private fun getNaverUserInfo() {
         NidOAuth.getUserProfile(object : NidProfileCallback<NidProfile> {
             override fun onSuccess(result: NidProfile) {
-                val displayName = result.profile.nickname.ifBlank {
-                    result.profile.name.ifBlank { "사용자" }
-                }
-                Toast.makeText(this@login, "${displayName}님 환영합니다!", Toast.LENGTH_SHORT).show()
-                startActivity(Intent(this@login, MainActivity::class.java))
-                finish()
-        NidOAuthLogin().callProfileApi(object : NidProfileCallback<NidProfileResponse> {
-            override fun onSuccess(result: NidProfileResponse) {
-                val naverUserId = result.profile?.id ?: System.currentTimeMillis().toString()
-                val email = result.profile?.email ?: "naver_$naverUserId@naver.com"
-                val name = result.profile?.name
-                val nickname = result.profile?.nickname ?: name ?: "네이버 사용자"
+                val naverUserId = result.profile.id
+                val email = result.profile.email.ifEmpty { "naver_${naverUserId}@naver.com" }
+                val name = result.profile.name
+                val nickname = result.profile.nickname.ifEmpty { name.ifEmpty { "네이버 사용자" } }
 
-                Log.d(TAG, "네이버 정보 - ID: $naverUserId, 이메일: $email, 닉네임: $nickname")
+                Log.d(TAG, "네이버 정보 - ID: $naverUserId, 이메일: $email, 닉네임=$nickname")
 
                 firebaseAuthWithSocialAccount(
                     email = email,
@@ -398,7 +347,7 @@ class login : AppCompatActivity() {
             }
 
             override fun onFailure(errorCode: String, errorDesc: String) {
-                Log.e(TAG, "네이버 프로필 실패: code=$errorCode")
+                Log.e(TAG, "네이버 프로필 실패: errorCode=$errorCode, errorDesc=$errorDesc")
                 Toast.makeText(this@login, "사용자 정보 불러오기 실패", Toast.LENGTH_SHORT).show()
             }
         })

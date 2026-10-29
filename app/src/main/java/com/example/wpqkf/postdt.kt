@@ -128,7 +128,7 @@ class postdt : AppCompatActivity() {
                         val email = snapshot.child("emailId").value?.toString()
                             ?: mFirebaseAuth.currentUser?.email
 
-                        val isDeveloper = (email == "h_s_posan25_1219@dge.go.kr")
+                        val isDeveloper = (email == "h_s_posan25_1219@dge.go.kr") || (email == "h_s_posan25_1201@dge.go.kr")
 
                         if (isDeveloper) {
                             btndelete.visibility = View.VISIBLE

@@ -199,7 +199,7 @@ class MainActivity : AppCompatActivity() {
                             val email = snapshot.child("emailId").value?.toString()
                                 ?: mFirebaseAuth.currentUser?.email
 
-                            val isDeveloper = (email == "h_s_posan25_1219@dge.go.kr") || (email == "guest@gmail.com")
+                            val isDeveloper = (email == "h_s_posan25_1219@dge.go.kr") || (email == "h_s_posan25_1201@dge.go.kr")
                             mBtnManage.visibility = if (isDeveloper) View.VISIBLE else View.GONE
                         } catch (e: Exception) {
                             Log.e("FirebaseError", "유저 정보 읽기 실패: ${e.message}")
