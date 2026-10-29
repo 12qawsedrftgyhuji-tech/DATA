@@ -7,6 +7,37 @@
     android:layout_height="match_parent"
     tools:context=".record">
 
+    <!-- 상단 타이틀 및 용량 안내 카드 -->
+    <LinearLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#F5F7FA"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AI 도우미 화면 녹화 기록"
+            android:textColor="#111111"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvStorageUsage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="저장 용량: 0.0 MB / 10 GB (초과 시 오래된 영상부터 자동 삭제)"
+            android:textColor="#666666"
+            android:textSize="13sp" />
+    </LinearLayout>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewRecord"
         android:layout_width="0dp"
@@ -16,8 +47,22 @@
         app:layout_constraintBottom_toTopOf="@+id/toolbar4"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/headerLayout"
         tools:listitem="@layout/item_record" />
+
+    <!-- 빈 화면 안내 메시지 -->
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="아직 저장된 녹화 영상이 없어요"
+        android:textColor="#888888"
+        android:textSize="18sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/toolbar4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/headerLayout" />
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar4"

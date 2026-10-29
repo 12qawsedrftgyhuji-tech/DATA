@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- 1. 접힌 상태: 화면 위에 떠 있는 동그란 원 버튼 (AI) -->
+    <LinearLayout
+        android:id="@+id/collapsed_view"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/bg_floating_circle"
+        android:gravity="center"
+        android:visibility="visible">
+
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="AI 도우미"
+            android:src="@drawable/ic_ai"
+            app:tint="#FFFFFF" />
+    </LinearLayout>
+
+    <!-- 2. 펼쳐진 상태: 화면 가로 전체를 채우는 AI 답변 박스 + 툴바 -->
+    <LinearLayout
+        android:id="@+id/expanded_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:background="@drawable/bg_box"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <!-- 1) 상단: AI 답변 표시 네모 상자 (세로 높이 확대) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="#F0F4F8"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI 도우미 답변"
+                android:textColor="#2196F3"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_ai_response"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:minHeight="110dp"
+                android:maxLines="10"
+                android:scrollbars="vertical"
+                android:text="AI 도우미가 대기 중입니다. 질문을 입력하거나 마이크를 눌러주세요."
+                android:textColor="#222222"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- 2) 하단: 가로 컨트롤 툴바 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- 질문 작성 칸 -->
+            <EditText
+                android:id="@+id/et_question"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_chip"
+                android:gravity="center_vertical"
+                android:hint="질문을 적어주세요..."
+                android:imeOptions="actionDone"
+                android:inputType="text"
+                android:paddingHorizontal="12dp"
+                android:textColor="#000000"
+                android:textColorHint="#888888"
+                android:textSize="14sp" />
+
+            <!-- 질문 전송 버튼 -->
+            <ImageButton
+                android:id="@+id/btn_send"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_send_circle"
+                android:contentDescription="질문 전송"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_send" />
+
+            <!-- 음성 질문 버튼 -->
+            <ImageButton
+                android:id="@+id/btn_mic"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_circle"
+                android:contentDescription="음성 질문"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_mic" />
+
+            <!-- 종료 버튼 -->
+            <Button
+                android:id="@+id/btn_stop_recording"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:backgroundTint="#FF5252"
+                android:paddingHorizontal="10dp"
+                android:text="종료"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp" />
+
+            <!-- 툴바 접기 버튼 -->
+            <ImageButton
+                android:id="@+id/btn_collapse"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="6dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="접기"
+                android:src="@android:drawable/ic_menu_close_clear_cancel" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

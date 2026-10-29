@@ -9,6 +9,7 @@ import com.google.api.client.http.HttpResponseException
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
+import com.google.api.services.calendar.CalendarScopes
 import com.google.api.services.calendar.model.Event
 import com.google.api.services.calendar.model.EventDateTime
 import com.google.firebase.auth.FirebaseAuth
@@ -71,9 +72,9 @@ object GoogleCalendarHelper {
         return null
     }
 
-    fun buildEventDateTime(cal: Calendar): Pair<DateTime, String> {
+    fun buildEventDateTime(cal: Calendar): Pair<com.google.api.client.util.DateTime, String> {
         val timeZone = TimeZone.getDefault()
-        val dateTime = DateTime(cal.time, timeZone)
+        val dateTime = com.google.api.client.util.DateTime(cal.time, timeZone)
         return Pair(dateTime, timeZone.id)
     }
 
@@ -96,6 +97,13 @@ object GoogleCalendarHelper {
                 description = if (category.isNotBlank()) "카테고리: $category" else null
                 start = EventDateTime().setDateTime(startDateTime).setTimeZone(startTz)
                 end = EventDateTime().setDateTime(endDateTime).setTimeZone(endTz)
+
+                setSummary(title)
+                if (category.isNotBlank()) {
+                    setDescription("카테고리: $category")
+                }
+                setStart(EventDateTime().setDateTime(startDateTime).setTimeZone(startTz))
+                setEnd(EventDateTime().setDateTime(endDateTime).setTimeZone(endTz))
             }
 
             val calendar = service(accessToken, transport)

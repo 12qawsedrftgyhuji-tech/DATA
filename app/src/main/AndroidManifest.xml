@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
@@ -44,7 +50,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <!-- Redirect URI: "kakao{네이티브앱키}://oauth" -->
-                <data android:host="oauth" android:scheme="c0fd3ed94485564b5e79fbb2f18aadb7" />
+                <data android:host="oauth" android:scheme="kakaoc0fd3ed94485564b5e79fbb2f18aadb7" />
             </intent-filter>
         </activity>
         <activity
@@ -67,9 +73,6 @@
             android:exported="false" />
         <activity
             android:name=".schedule"
-            android:exported="false" />
-        <activity
-            android:name=".toolbar_border"
             android:exported="false" />
         <activity
             android:name=".user"
@@ -103,6 +106,37 @@
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="ocr" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- 접근성 서비스 등록 -->
+        <service
+            android:name=".ScreenCaptureAccessibilityService"
+            android:enabled="true"
+            android:exported="true"
+            android:label="AI 화면 도우미"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <service
+            android:name=".FloatingToolbarService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection|microphone" />
     </application>
 
 </manifest>

@@ -82,29 +82,89 @@
         </LinearLayout>
     </androidx.appcompat.widget.Toolbar>
 
-    <Button
+    <!-- ===== 버튼 1: 카메라를 이용하여 디지털 기기 인식 ===== -->
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/BtnTR"
-        android:layout_width="196dp"
-        android:layout_height="135dp"
+        android:layout_width="330dp"
+        android:layout_height="105dp"
+        android:layout_marginTop="208dp"
+        android:background="@drawable/bg_main_button"
+        android:lineHeight="30sp"
+        android:paddingStart="120dp"
+        android:paddingEnd="20dp"
         android:text="카메라를 이용하여 디지털 기기 인식"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toTopOf="@+id/toolbar4"
+        android:textAllCaps="false"
+        android:textColor="#000000"
+        android:textSize="25sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.287" />
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <Button
+    <!-- ===== 버튼 2: 디지털 기기에 대해 대화나누기 ===== -->
+    <ImageView
+        android:id="@+id/iconTR"
+        android:layout_width="105dp"
+        android:layout_height="105dp"
+        android:layout_marginStart="0dp"
+        android:contentDescription="카메라"
+        android:elevation="7dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_camera_device"
+        app:layout_constraintStart_toStartOf="@id/BtnTR"
+        app:layout_constraintTop_toTopOf="@id/BtnTR" />
+
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnTa"
-        android:layout_width="196dp"
-        android:layout_height="135dp"
+        android:layout_width="330dp"
+        android:layout_height="105dp"
+        android:layout_marginTop="394dp"
+        android:background="@drawable/bg_main_button"
+        android:lineHeight="30sp"
+        android:paddingStart="120dp"
+        android:paddingEnd="20dp"
         android:text="디지털 기기에 대해 대화나누기"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toTopOf="@+id/toolbar4"
+        android:textAllCaps="false"
+        android:textColor="#000000"
+        android:textSize="25sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.635" />
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/circleTa"
+        android:layout_width="105dp"
+        android:layout_height="105dp"
+        android:layout_marginStart="0dp"
+        android:background="@drawable/bg_circle_blue"
+        android:elevation="6dp"
+        app:layout_constraintStart_toStartOf="@id/btnTa"
+        app:layout_constraintTop_toTopOf="@id/btnTa" />
+
+    <ImageView
+        android:id="@+id/iconTa"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:contentDescription="대화"
+        android:elevation="7dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_chat_device"
+        app:layout_constraintBottom_toBottomOf="@id/circleTa"
+        app:layout_constraintEnd_toEndOf="@id/circleTa"
+        app:layout_constraintStart_toStartOf="@id/circleTa"
+        app:layout_constraintTop_toTopOf="@id/circleTa" />
+
+    <!-- ===== 버튼 3: 외부 앱 화면 AI 도움받기 ===== -->
+    <Button
+        android:id="@+id/btnStartExternalAi"
+        android:layout_width="330dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="16dp"
+        android:backgroundTint="#2196F3"
+        android:text="외부 앱 화면 AI 도움받기"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnTa" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

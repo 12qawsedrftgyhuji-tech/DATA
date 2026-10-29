@@ -19,6 +19,7 @@ import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.Button
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.ImageButton
@@ -42,6 +43,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.ai.client.generativeai.Chat
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
+import com.google.ai.client.generativeai.type.generationConfig
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
@@ -60,6 +62,7 @@ import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -148,6 +151,46 @@ class TextAnalyzer(
                 // 분석이 끝나면 imageProxy를 닫아주어야 다음 프레임이 전달됨
                 imageProxy.close()
             }
+    }
+}
+
+// ---------------- 규칙 기반 추천 질문 (토큰 0) ----------------
+// 버튼에 보일 짧은 주제 + 눌렀을 때 실제로 보낼 질문
+data class Suggestion(
+    val label: String,     // 버튼 표시용 (5~8자)
+    val question: String   // Gemini에 보낼 전체 질문
+)
+
+object SuggestionEngine {
+    private data class Rule(
+        val keyword: String,
+        val label: String,
+        val question: String,
+        val priority: Int
+    )
+
+    private val rules = listOf(
+        Rule("결제", "결제 방법", "결제는 어떻게 해요?", 5),
+        Rule("카드", "카드 넣는 곳", "카드는 어디에 넣어야 해요?", 4),
+        Rule("번호표", "번호표 받기", "번호표는 어떻게 받아요?", 4),
+        Rule("포장", "포장/매장 선택", "포장이랑 매장 식사 중에 뭘 눌러야 해요?", 3),
+        Rule("매장", "포장/매장 선택", "포장이랑 매장 식사 중에 뭘 눌러야 해요?", 3),
+        Rule("주문", "주문 시작", "주문은 어떻게 시작해요?", 2),
+        Rule("터치", "누를 곳", "어디를 눌러야 해요?", 1)
+    )
+
+    private val defaults = listOf(
+        Suggestion("지금 할 일", "지금 화면에서 뭘 해야 해요?"),
+        Suggestion("화면 설명", "이 화면은 무슨 화면이에요?")
+    )
+
+    fun suggest(ocrText: String): List<Suggestion> {
+        val compact = ocrText.replace("\\s".toRegex(), "")
+        val matched = rules
+            .filter { compact.contains(it.keyword) }
+            .sortedByDescending { it.priority }
+            .map { Suggestion(it.label, it.question) }
+        return (matched + defaults).distinct().take(2)
     }
 }
 
@@ -240,15 +283,73 @@ class ChatRepository {
 
 private var username = "사용자"
 private var userage = -1
-
 //Gemini 대화 작업 (채팅 세션으로 대화 맥락 유지)
 // 이름/나이가 확정된 뒤 init()을 호출해야 모델이 만들어진다.
 class GeminiClient {
 
     private var model: GenerativeModel? = null
     private var chat: Chat? = null
+    private var suggestModel: GenerativeModel? = null   // AI 추천 전용 (대화 기록 없음)
 
     val isReady: Boolean get() = chat != null
+    val isSuggestReady: Boolean get() = suggestModel != null
+
+    fun initSuggest() {
+        if (suggestModel != null) return
+        suggestModel = GenerativeModel(
+            modelName = "gemini-3.5-flash-lite",
+            apiKey = BuildConfig.GEMINI_API_KEY,
+            generationConfig = generationConfig {
+                maxOutputTokens = 1024          // 여유 있게 (프롬프트가 짧게 답하도록 제한하고 있어서 실제 사용량은 적음)
+                temperature = 0.4f
+            },
+            systemInstruction = content {
+                text(
+                    """
+당신은 디지털 기기(키오스크 등) 사용이 어려운 사용자를 돕는 도우미입니다.
+화면 OCR 텍스트를 보고 사용자가 지금 물어볼 만한 질문 2개를 추천하세요.
+- 정확히 2줄, 각 줄은 "주제|질문" 형식입니다.
+- 주제는 5~8자, 질문은 25자 이내의 쉬운 말로 쓰세요.
+- 화면에 실제로 보이는 단어(버튼 이름 등)를 활용하세요.
+- 다른 설명, 번호, 마크다운은 쓰지 마세요.
+예:
+결제 방법|결제는 어떻게 해요?
+포장 선택|포장하려면 뭘 눌러야 해요?
+""".trimIndent()
+                )
+            }
+        )
+    }
+    private fun Throwable.isRetryable(): Boolean {
+        var t: Throwable? = this
+        while (t != null) {
+            if (t is java.net.SocketTimeoutException ||
+                t is java.io.IOException) return true
+            val msg = t.message.orEmpty()
+            if (msg.contains("503") || msg.contains("UNAVAILABLE") ||
+                msg.contains("high demand") || msg.contains("overloaded")) return true
+            t = t.cause
+        }
+        return false
+    }
+
+    private suspend fun <T> withRetry(
+        times: Int = 3,
+        initialDelayMs: Long = 500L,
+        block: suspend () -> T
+    ): T {
+        var delayMs = initialDelayMs
+        repeat(times - 1) {
+            try {
+                return block()
+            } catch (e: Exception) {
+                if (!e.isRetryable()) throw e
+                kotlinx.coroutines.delay(delayMs)
+                delayMs *= 2
+            }
+        }
+        return block()
+    }
 
     fun init(name: String, age: Int, history: List<ChatTurn> = emptyList()) {
         val nameText = if (name.isNotBlank()) "사용자의 이름은 ${name}입니다." else ""
@@ -316,6 +417,39 @@ class GeminiClient {
             }
         }
     }
+
+    // 대화 기록 없이 1회성 호출 (OCR은 1000자로 제한)
+    fun suggest(
+        ocrText: String,
+        onResult: (suggestions: List<Suggestion>, totalTokens: Int) -> Unit,
+        onError: (Throwable) -> Unit
+    ) {
+        val m = suggestModel
+        if (m == null) {
+            onError(IllegalStateException("Gemini 모델이 아직 초기화되지 않았습니다."))
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = kotlinx.coroutines.withTimeout(15_000) {
+                    m.generateContent("[화면 OCR 텍스트]\n${ocrText.take(600)}")
+                }
+                val list = response.text.orEmpty().lines()
+                    .map { it.trim().trimStart('-', '*', ' ') }
+                    .filter { it.contains("|") }
+                    .map {
+                        val parts = it.split("|", limit = 2)
+                        Suggestion(parts[0].trim().take(8), parts[1].trim())
+                    }
+                    .filter { it.label.isNotBlank() && it.question.isNotBlank() }
+                    .take(2)
+
+                onResult(list, response.usageMetadata?.totalTokenCount ?: 0)
+            } catch (e: Exception) {
+                onError(e)
+            }
+        }
+    }
 }
 
 class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
@@ -326,6 +460,9 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var mBtnHome4: ImageButton
     private lateinit var mBtnAi4: ImageButton
     private lateinit var mBtnProfile4: ImageButton
+    // Activity 멤버 변수
+    private var cachedUsage: Long? = null
+
     val recognizer = TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
 
     //cameraX - MLkit 작업용
@@ -339,6 +476,17 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var tvAnswer: TextView
     private lateinit var etMessage: EditText
     private lateinit var switchAutoRead: SwitchCompat
+
+    // 추천 질문 버튼
+    private lateinit var btnSuggest1: Button
+    private lateinit var btnSuggest2: Button
+    private lateinit var btnAiSuggest: Button
+
+    private var shownSuggestions: List<Suggestion> = emptyList()
+    private var candidateSuggestions: List<Suggestion>? = null
+    private var candidateCount = 0
+    private var isSuggesting = false
+    private var aiHoldUntil = 0L   // AI 추천이 이 시각까지는 규칙 기반 추천이 덮어쓰지 않음
 
     // 음성 출력(TTS)
     private var tts: TextToSpeech? = null
@@ -366,6 +514,8 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun handleResult(result: KioskResult) {
         latestOcrText = result.blocks.joinToString("\n") { it.text }
+        val ocrSnapshot = latestOcrText
+        runOnUiThread { updateSuggestions(ocrSnapshot) }   // 규칙 기반 추천 갱신
 
         hitCount = if (result.isKiosk) hitCount + 1 else 0
         val nowConfirmed = hitCount >= 3
@@ -376,6 +526,115 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
                 // 예: statusTextView.text = if (confirmed) "키오스크 감지됨" else "탐색 중..."
             }
         }
+    }
+
+    // ---------------- 추천 질문 ----------------
+
+    private fun updateSuggestions(ocrText: String) {
+        if (isFinishing || isDestroyed) return
+        if (SystemClock.elapsedRealtime() < aiHoldUntil) return   // AI 추천 표시 중에는 유지
+        if (ocrText.isBlank()) return   // 텍스트가 안 잡히면 기존 추천 유지
+
+        val next = SuggestionEngine.suggest(ocrText)
+
+        if (next == shownSuggestions) {   // 이미 표시 중이면 후보 초기화
+            candidateSuggestions = null
+            candidateCount = 0
+            return
+        }
+
+        // 같은 후보가 연속 3프레임(약 1초) 나올 때만 교체 → 버튼 깜빡임 방지
+        if (next == candidateSuggestions) candidateCount++
+        else {
+            candidateSuggestions = next
+            candidateCount = 1
+        }
+
+        if (candidateCount >= 3) {
+            shownSuggestions = next
+            applySuggestions(next)
+        }
+    }
+
+    private fun applySuggestions(list: List<Suggestion>) {
+        val s1 = list.getOrNull(0)
+        val s2 = list.getOrNull(1)
+
+        btnSuggest1.text = s1?.label.orEmpty()
+        btnSuggest1.tag = s1?.question
+        btnSuggest2.text = s2?.label.orEmpty()
+        btnSuggest2.tag = s2?.question
+
+        btnSuggest1.visibility = if (s1 != null) View.VISIBLE else View.GONE
+        btnSuggest2.visibility = if (s2 != null) View.VISIBLE else View.GONE
+    }
+
+    private fun resetAiButton() {
+        isSuggesting = false
+        btnAiSuggest.isEnabled = true
+        btnAiSuggest.text = "질문 추천"
+    }
+
+    // 버튼을 눌렀을 때만 Gemini를 1회 호출해서 추천 질문을 만든다
+    private fun requestAiSuggestions() {
+        if (!googleUser) {
+            checkUserAndShowDialog(false)
+            return
+        }
+        if (!geminiClient.isSuggestReady) {
+            Toast.makeText(this, "질문을 준비하는 중이에요. 잠시 후 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (isSuggesting || isSending) return
+
+        val ocr = latestOcrText
+        if (ocr.isBlank()) {
+            Toast.makeText(this, "화면의 글자가 아직 인식되지 않았어요. 화면을 비춰 주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 캐시된 사용량으로 한도 확인 (Firestore 응답을 기다리지 않음)
+        val used = cachedUsage
+        if (used == null) {
+            Toast.makeText(this, "사용량을 확인하는 중이에요. 잠시 후 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (used >= DAILY_TOKEN_LIMIT) {
+            Toast.makeText(this, "오늘 AI 사용량을 모두 사용했어요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isSuggesting = true
+        btnAiSuggest.isEnabled = false
+        btnAiSuggest.text = "생성 중..."
+
+        geminiClient.suggest(
+            ocrText = ocr,
+            onResult = { list, tokens ->
+                runOnUiThread {
+                    if (list.isEmpty()) {
+                        Toast.makeText(this, "추천을 만들지 못했어요. 다시 시도해 주세요.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        shownSuggestions = list
+                        candidateSuggestions = null
+                        candidateCount = 0
+                        applySuggestions(list)
+                        aiHoldUntil = SystemClock.elapsedRealtime() + 30_000
+                    }
+                    // 결과가 비어도 토큰은 이미 소모됐으므로 항상 기록
+                    cachedUsage = (cachedUsage ?: 0L) + tokens
+                    chatRepo.addUsage(tokens)
+                    resetAiButton()
+                }
+            },
+            onError = { e ->
+                Log.e("Gemini", "추천 요청 실패", e)
+                runOnUiThread {
+                    Toast.makeText(this, "추천 중 오류가 발생했어요.", Toast.LENGTH_SHORT).show()
+                    resetAiButton()
+                }
+            }
+        )
     }
 
     private val permissionLauncher =
@@ -397,8 +656,6 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
             (profile.providerId == GoogleAuthProvider.PROVIDER_ID) || (profile.providerId == "oidc.kakao") || (profile.providerId == "naver")
         }
     }
-
-
 
     fun checkUserAndShowDialog(AreuOk: Boolean) {
         if (!AreuOk) {
@@ -596,6 +853,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
     // 이름/나이가 확정된 뒤에 호출: 과거 대화를 불러와 모델을 만들고 화면에 표시
     private fun initGemini() {
         if (!googleUser) return
+        chatRepo.getTodayUsage { cachedUsage = it }
         chatRepo.loadRecent(20) { turns ->
             if (isFinishing || isDestroyed) return@loadRecent
             geminiClient.init(username, userage, turns)
@@ -631,53 +889,55 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         val q = question.trim()
         if (q.isEmpty() || isSending) return
+
+        // 캐시된 사용량으로 한도 확인 (서버 응답을 기다리지 않음)
+        val used = cachedUsage
+        if (used == null) {
+            renderLog("사용량을 확인하는 중이에요. 잠시 후 다시 시도해 주세요.")
+            return
+        }
+        if (used >= DAILY_TOKEN_LIMIT) {
+            val limitMsg = "오늘 사용할 수 있는 AI 사용량을 모두 사용했어요. 내일 다시 이용해 주세요."
+            renderLog(" $limitMsg")
+            if (switchAutoRead.isChecked) speak(limitMsg)
+            return
+        }
+
         isSending = true
         tts?.stop() // 새 질문을 보내면 읽던 것을 멈춤
 
-        renderLog(" $q\n 사용량 확인 중...")
+        val ocr = latestOcrText // 전송 시점의 OCR 결과
+        renderLog(" $q\n 답변을 만드는 중...")
 
-        // 전송 전에 오늘 사용량을 서버에서 확인 (다른 기기 사용분도 반영)
-        chatRepo.getTodayUsage { used ->
-            if (used == null) {
-                renderLog("사용량을 확인하지 못했어요. 인터넷 연결을 확인해 주세요.")
-                isSending = false
-                return@getTodayUsage
-            }
-            if (used >= DAILY_TOKEN_LIMIT) {
-                val limitMsg = "오늘 사용할 수 있는 AI 사용량을 모두 사용했어요. 내일 다시 이용해 주세요."
-                renderLog(" $limitMsg")
-                if (switchAutoRead.isChecked) speak(limitMsg)
-                isSending = false
-                return@getTodayUsage
-            }
-
-            val ocr = latestOcrText // 전송 시점의 OCR 결과
-            renderLog(" $q\n 답변을 만드는 중...")
-
-            geminiClient.ask(
-                ocrText = ocr,
-                question = q,
-                onResult = { answer, tokens ->
-                    runOnUiThread {
-                        val a = answer.ifBlank { "답변을 받지 못했어요." }
-                        val percent = ((used + tokens) * 100 / DAILY_TOKEN_LIMIT).coerceAtMost(100)
-                        chatLog.append("질문:$q\n답변:$a\n 오늘 사용량 $percent%\n\n")
-                        renderLog()
-                        if (switchAutoRead.isChecked) speak(a) // 읽어주기 ON이면 답변 낭독
-                        chatRepo.save(q, a, ocr)
-                        chatRepo.addUsage(tokens)
-                        isSending = false
-                    }
-                },
-                onError = { e ->
-                    Log.e("Gemini", "요청 실패", e)
-                    runOnUiThread {
-                        renderLog(" $q\n오류가 발생했어요. 잠시 후 다시 시도해 주세요.")
-                        isSending = false
-                    }
+        geminiClient.ask(
+            ocrText = ocr,
+            question = q,
+            onResult = { answer, tokens ->
+                runOnUiThread {
+                    val a = answer.ifBlank { "답변을 받지 못했어요." }
+                    val newUsed = (cachedUsage ?: 0L) + tokens
+                    cachedUsage = newUsed
+                    val percent = (newUsed * 100 / DAILY_TOKEN_LIMIT).coerceAtMost(100)
+                    chatLog.append("질문:$q\n답변:$a\n 오늘 사용량 $percent%\n\n")
+                    renderLog()
+                    if (switchAutoRead.isChecked) speak(a) // 읽어주기 ON이면 답변 낭독
+                    chatRepo.save(q, a, ocr)
+                    chatRepo.addUsage(tokens)
+                    isSending = false
                 }
-            )
-        }
+            },
+            onError = { e ->
+                Log.e("Gemini", "요청 실패", e)
+                val msg = if (e.message?.contains("503") == true || e.message?.contains("high demand") == true)
+                    "지금 AI가 많이 바빠요. 잠시 후 다시 시도해 주세요."
+                else
+                    "오류가 발생했어요. 잠시 후 다시 시도해 주세요."
+                runOnUiThread {
+                    renderLog(" $q\n$msg")
+                    isSending = false
+                }
+            }
+        )
     }
 
     private fun onSendClicked() {
@@ -724,6 +984,22 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
         tvAnswer = findViewById(R.id.tvAnswer)
         etMessage = findViewById(R.id.etMessage)
         answerScroll = findViewById(R.id.answerScroll)
+
+        // 추천 질문 버튼 연결 (카메라 콜백에서 쓰이므로 카메라 시작 전에 연결)
+        btnSuggest1 = findViewById(R.id.btnSuggest1)
+        btnSuggest2 = findViewById(R.id.btnSuggest2)
+        btnAiSuggest = findViewById(R.id.btnAiSuggest)
+
+        shownSuggestions = SuggestionEngine.suggest("")   // 시작할 땐 기본 추천
+        applySuggestions(shownSuggestions)
+
+        btnSuggest1.setOnClickListener {
+            (btnSuggest1.tag as? String)?.let { sendToGemini(it) }
+        }
+        btnSuggest2.setOnClickListener {
+            (btnSuggest2.tag as? String)?.let { sendToGemini(it) }
+        }
+        btnAiSuggest.setOnClickListener { requestAiSuggestions() }
 
         //seekbar 읽기 속도 조절
         val speedSeekBar = findViewById<SeekBar>(R.id.speedSeekBar)
@@ -796,6 +1072,7 @@ class textRecognizer : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         // ★ googleUser / username 은 Firebase 요청보다 "먼저" 세팅해야 한다
         googleUser = isEmailUser()
+        if (googleUser) geminiClient.initSuggest()   // 추가
         username = FirebaseAuth.getInstance().currentUser?.displayName.orEmpty()
 
         // ★ userage 가져오기 → 가져온 뒤에 Gemini 초기화
